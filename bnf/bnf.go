@@ -25,15 +25,18 @@ func (e *Error) Error() string {
 type Term struct {
 	Name     []byte
 	Terminal bool
+	Begin    int
+	End      int
 }
 
 func (t *Term) String() string {
 	var name = string(t.Name)
+	var pos = "begin=" + strconv.Itoa(t.Begin) + "; end=" + strconv.Itoa(t.End)
 	var terminal = "false"
 	if t.Terminal {
 		terminal = "true"
 	}
-	return "<Term name=" + name + "; terminal=" + terminal + ">"
+	return "<Term name=" + name + "; terminal=" + terminal + "; " + pos + ">"
 }
 
 // Expression is a list of terminals and non-terminals.

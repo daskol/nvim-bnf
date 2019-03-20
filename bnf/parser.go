@@ -40,7 +40,10 @@ func (p *BNFParser) parseSyntax() ([]*ProductionRule, error) {
 	var ret []*ProductionRule
 	var rule *ProductionRule
 
-	if rule, err = p.parseRule(); err != nil {
+	if rule, err = p.parseRule(); err == io.EOF {
+		ret = append(ret, rule)
+		return ret, nil
+	} else if err != nil {
 		return nil, err
 	}
 
@@ -90,7 +93,9 @@ func (p *BNFParser) parseRule() (*ProductionRule, error) {
 		return nil, err
 	}
 
-	if err = p.parseLineEnd(); err != nil {
+	if err = p.parseLineEnd(); err == io.EOF {
+		return &rule, nil
+	} else if err != nil {
 		return nil, err
 	}
 
@@ -241,9 +246,11 @@ func (p *BNFParser) parseList() (Expression, error) {
 }
 
 func (p *BNFParser) parseTerm() (*Term, error) {
+	var begin = p.pos
+
 	// Parse terminal literal.
 	if literal, err := p.parseLiteral(); err == nil {
-		return &Term{literal, true}, nil
+		return &Term{literal, true, begin, p.pos}, nil
 	}
 
 	// Parse non-terminal.
@@ -257,6 +264,8 @@ func (p *BNFParser) parseTerm() (*Term, error) {
 		return nil, err
 	} else {
 		term.Name = ruleName
+		term.Begin = begin
+		term.End = p.pos + 1
 	}
 
 	if _, err := p.parseRAngle(); err != nil {
