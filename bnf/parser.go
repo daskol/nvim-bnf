@@ -27,6 +27,14 @@ func (p *BNFParser) Parse() (*BNF, error) {
 	}
 }
 
+func (p *BNFParser) eof() error {
+	if p.pos == len(p.buf) {
+		return io.EOF
+	} else {
+		return nil
+	}
+}
+
 func (p *BNFParser) parseSyntax() ([]*ProductionRule, error) {
 	var err error
 	var ret []*ProductionRule
@@ -259,6 +267,10 @@ func (p *BNFParser) parseTerm() (*Term, error) {
 }
 
 func (p *BNFParser) parseLiteral() ([]byte, error) {
+	if err := p.eof(); err != nil {
+		return nil, err
+	}
+
 	var literal []byte
 
 	switch p.buf[p.pos] {
@@ -358,7 +370,12 @@ func (p *BNFParser) parseVerticalBar() (byte, error) {
 }
 
 func (p *BNFParser) parseLetter() (byte, error) {
+	if err := p.eof(); err != nil {
+		return byte(0), err
+	}
+
 	var char = p.buf[p.pos]
+
 	if (char >= 0x41 && char <= 0x5a) || (char >= 0x61 && char <= 0x7a) {
 		p.pos++
 		return char, nil
@@ -368,6 +385,10 @@ func (p *BNFParser) parseLetter() (byte, error) {
 }
 
 func (p *BNFParser) parseDigit() (byte, error) {
+	if err := p.eof(); err != nil {
+		return byte(0), err
+	}
+
 	if char := p.buf[p.pos]; char >= 0x30 && char <= 0x39 {
 		p.pos++
 		return char, nil
@@ -377,6 +398,10 @@ func (p *BNFParser) parseDigit() (byte, error) {
 }
 
 func (p *BNFParser) parseSymbol() (byte, error) {
+	if err := p.eof(); err != nil {
+		return byte(0), err
+	}
+
 	var char = p.buf[p.pos]
 	var symbols = []byte{
 		'|', ' ', '!', '#', '$', '%', '&', '(', ')', '*', '+', ',', '-', '.',
@@ -395,11 +420,9 @@ func (p *BNFParser) parseSymbol() (byte, error) {
 }
 
 func (p *BNFParser) parseChar(char byte) (byte, error) {
-	if p.pos == len(p.buf) {
-		return byte(0), io.EOF
-	}
-
-	if p.buf[p.pos] != char {
+	if err := p.eof(); err != nil {
+		return byte(0), err
+	} else if p.buf[p.pos] != char {
 		return byte(0), ErrUnexpectedChar
 	} else {
 		p.pos++
