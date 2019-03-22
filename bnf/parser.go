@@ -177,6 +177,18 @@ func (p *BNFParser) parseDefinitionSimbol() (*Token, error) {
 	}
 }
 
+func (p *BNFParser) parseDisjunction() (*Token, error) {
+	if _, err := p.parseVerticalBar(); err != nil {
+		return nil, err
+	} else {
+		return &Token{
+			Name:  []byte{'|'},
+			Begin: p.pos - 1,
+			End:   p.pos,
+		}, nil
+	}
+}
+
 func (p *BNFParser) parseExpression() ([]Expression, error) {
 	var ret []Expression
 	var offset int
@@ -195,7 +207,7 @@ func (p *BNFParser) parseExpression() ([]Expression, error) {
 		return ret, nil
 	}
 
-	if _, err := p.parseVerticalBar(); err != nil {
+	if _, err := p.parseDisjunction(); err != nil {
 		p.pos = offset
 		return ret, nil
 	}
