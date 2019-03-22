@@ -239,21 +239,26 @@ func main() {
 		}
 	}()
 
+	logger.Infof("register plugin handlers")
 	plugin.Main(func(p *plugin.Plugin) error {
-		var opts = &plugin.AutocmdOptions{
-			Event:   "BufRead",
-			Group:   "nvim-bnf",
-			Pattern: "*.bnf",
-			Eval:    `expand("<afile>")`,
-		}
-
+		// Register event handlers during actual loading.
 		if p.Nvim != nil {
 			p.Nvim.RegisterHandler("nvim_buf_changedtick_event", HandleBufChangedTickEvent)
 			p.Nvim.RegisterHandler("nvim_buf_detach_event", HandleBufDetachEvent)
 			p.Nvim.RegisterHandler("nvim_buf_lines_event", HandleBufLinesEvent)
 		}
 
-		p.HandleAutocmd(opts, HandleBufReadEvent)
+		// Register autocommands.
+		for _, event := range []string{"BufRead", "BufNewFile"} {
+			var opts = &plugin.AutocmdOptions{
+				Event:   event,
+				Group:   "nvim-bnf",
+				Pattern: "*.bnf",
+				Eval:    `expand("<afile>")`,
+			}
+			p.HandleAutocmd(opts, HandleBufReadEvent)
+		}
+
 		return nil
 	})
 }
