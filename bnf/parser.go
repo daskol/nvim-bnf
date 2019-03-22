@@ -59,6 +59,7 @@ func (p *BNFParser) parseSyntax() ([]*ProductionRule, error) {
 
 func (p *BNFParser) parseRule() (*ProductionRule, error) {
 	var err error
+	var token *Token
 	var rule = new(ProductionRule)
 
 	if err = p.parseOptWhitespace(); err != nil {
@@ -73,8 +74,10 @@ func (p *BNFParser) parseRule() (*ProductionRule, error) {
 		return nil, err
 	}
 
-	if err = p.parseDefinitionSimbol(); err != nil {
+	if token, err = p.parseDefinitionSimbol(); err != nil {
 		return nil, err
+	} else {
+		rule.Token = *token
 	}
 
 	if err = p.parseOptWhitespace(); err != nil {
@@ -162,12 +165,15 @@ func (p *BNFParser) parseCharacterAndDoubleQuote() (byte, error) {
 	}
 }
 
-func (p *BNFParser) parseDefinitionSimbol() error {
-	if string(p.buf[p.pos:p.pos+3]) != "::=" {
-		return ErrUnexpectedChar
+func (p *BNFParser) parseDefinitionSimbol() (*Token, error) {
+	const name = "::="
+	var token = Token{Name: []byte(name), Begin: p.pos, End: p.pos + 3}
+
+	if string(p.buf[p.pos:p.pos+3]) != name {
+		return nil, ErrUnexpectedChar
 	} else {
 		p.pos += 3
-		return nil
+		return &token, nil
 	}
 }
 

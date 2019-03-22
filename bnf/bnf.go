@@ -21,6 +21,8 @@ func (e *Error) Error() string {
 	return e.err.Error() + " at position " + strconv.Itoa(e.pos)
 }
 
+type Token = Term
+
 // Term represents terminal or non-terminal.
 type Term struct {
 	Name     []byte
@@ -53,6 +55,7 @@ func (e *Expression) String() string {
 // ProductionRule is a production rule itself. Actually, it contains several
 // rules for a non-terminal.
 type ProductionRule struct {
+	Token       // Points to lexeme that contains `::=`.
 	Name        *Term
 	Expressions []Expression
 }
