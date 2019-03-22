@@ -102,13 +102,20 @@ func (d *Document) hightlightLine(v *nvim.Nvim, buf nvim.Buffer, row int) error 
 
 	batch.ClearBufferHighlight(buf, -1, row, row+1)
 
+	var grp = "Identifier"
+	var begin = rule.Name.Begin
+	var end = rule.Name.End
+
+	batch.AddBufferHighlight(buf, 0, grp, row, begin, end, &res)
+
 	for _, token := range list {
-		var grp = "Keyword"
-		var begin = token.Begin
-		var end = token.End
+		begin = token.Begin
+		end = token.End
 
 		if token.Terminal {
 			grp = "String"
+		} else {
+			grp = "Identifier"
 		}
 
 		batch.AddBufferHighlight(buf, 0, grp, row, begin, end, &res)
