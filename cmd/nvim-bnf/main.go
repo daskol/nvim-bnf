@@ -6,7 +6,7 @@ import (
 	"errors"
 	"log"
 
-	"github.com/daskol/metalanguage/bnf"
+	"github.com/daskol/nvim-bnf/bnf"
 	"github.com/neovim/go-client/nvim"
 	"github.com/neovim/go-client/nvim/plugin"
 )
