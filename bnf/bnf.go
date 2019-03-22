@@ -53,7 +53,7 @@ func (e *Expression) String() string {
 // ProductionRule is a production rule itself. Actually, it contains several
 // rules for a non-terminal.
 type ProductionRule struct {
-	Name        []byte
+	Name        *Term
 	Expressions []Expression
 }
 
@@ -62,7 +62,7 @@ func (r *ProductionRule) String() string {
 	for _, expr := range r.Expressions {
 		parts = append(parts, expr.String())
 	}
-	return string(r.Name) + " -> " + strings.Join(parts, " | ")
+	return r.Name.String() + " -> " + strings.Join(parts, " | ")
 }
 
 // BNF types corresponds parsed BNF grammar.

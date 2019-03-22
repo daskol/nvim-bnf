@@ -59,21 +59,13 @@ func (p *BNFParser) parseSyntax() ([]*ProductionRule, error) {
 
 func (p *BNFParser) parseRule() (*ProductionRule, error) {
 	var err error
-	var rule ProductionRule
+	var rule = new(ProductionRule)
 
 	if err = p.parseOptWhitespace(); err != nil {
 		return nil, err
 	}
 
-	if _, err = p.parseLAngle(); err != nil {
-		return nil, err
-	}
-
-	if rule.Name, err = p.parseRuleName(); err != nil {
-		return nil, err
-	}
-
-	if _, err = p.parseRAngle(); err != nil {
+	if rule.Name, err = p.parseNonTerminal(); err != nil {
 		return nil, err
 	}
 
@@ -94,12 +86,12 @@ func (p *BNFParser) parseRule() (*ProductionRule, error) {
 	}
 
 	if err = p.parseLineEnd(); err == io.EOF {
-		return &rule, nil
+		return rule, nil
 	} else if err != nil {
 		return nil, err
 	}
 
-	return &rule, nil
+	return rule, nil
 }
 
 func (p *BNFParser) parseRuleName() ([]byte, error) {
@@ -254,25 +246,11 @@ func (p *BNFParser) parseTerm() (*Term, error) {
 	}
 
 	// Parse non-terminal.
-	if _, err := p.parseLAngle(); err != nil {
-		return nil, err
-	}
-
-	var term Term
-
-	if ruleName, err := p.parseRuleName(); err != nil {
-		return nil, err
+	if nonTerminal, err := p.parseNonTerminal(); err == nil {
+		return nonTerminal, nil
 	} else {
-		term.Name = ruleName
-		term.Begin = begin
-		term.End = p.pos + 1
-	}
-
-	if _, err := p.parseRAngle(); err != nil {
 		return nil, err
 	}
-
-	return &term, nil
 }
 
 func (p *BNFParser) parseLiteral() ([]byte, error) {
@@ -320,6 +298,28 @@ func (p *BNFParser) parseLiteral() ([]byte, error) {
 	}
 
 	return literal, nil
+}
+
+func (p *BNFParser) parseNonTerminal() (*Term, error) {
+	var err error
+	var nonTerminal = new(Term)
+	var begin = p.pos
+
+	if _, err := p.parseLAngle(); err != nil {
+		return nil, err
+	}
+
+	if nonTerminal.Name, err = p.parseRuleName(); err != nil {
+		return nil, err
+	}
+
+	if _, err := p.parseRAngle(); err != nil {
+		return nil, err
+	}
+
+	nonTerminal.Begin = begin
+	nonTerminal.End = p.pos
+	return nonTerminal, nil
 }
 
 func (p *BNFParser) parseLineEnd() error {
