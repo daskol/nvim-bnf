@@ -85,41 +85,58 @@ func (d *Document) hightlightLine(v *nvim.Nvim, buf nvim.Buffer, row int) error 
 		}
 	}()
 
-	var tokens, err = bnf.Parse(d.Lines[row])
+	var ast *bnf.BNF
+	var res int
+	var err error
 
-	if err != nil {
+	if ast, err = bnf.Parse(d.Lines[row]); err != nil {
 		return err
 	}
 
-	var res int
-	var list []*bnf.Term
-	var rule = tokens.Rules[0]
-	var batch = v.NewBatch()
-
-	for _, expr := range rule.Expressions {
-		list = append(list, expr...)
-	}
-
+	batch := v.NewBatch()
 	batch.ClearBufferHighlight(buf, -1, row, row+1)
 
-	var grp = "Identifier"
-	var begin = rule.Name.Begin
-	var end = rule.Name.End
-
-	batch.AddBufferHighlight(buf, 0, grp, row, begin, end, &res)
-
-	for _, token := range list {
-		begin = token.Begin
-		end = token.End
-
-		if token.Terminal {
-			grp = "String"
-		} else {
-			grp = "Identifier"
+	bnf.Visit(ast.Rules[0], func(node bnf.Node) error {
+		if node == nil {
+			logger.Errorf("visiting nil node")
 		}
 
-		batch.AddBufferHighlight(buf, 0, grp, row, begin, end, &res)
-	}
+		var grp string
+		var begin, end int
+
+		switch node := node.(type) {
+		case *bnf.ProductionRule:
+			grp = "Operator"
+			begin = node.Begin
+			end = node.End
+			batch.AddBufferHighlight(buf, 0, grp, row, begin, end, &res)
+		case *bnf.Token:
+			grp = "Identifier"
+			begin = node.Begin
+			end = node.End
+			batch.AddBufferHighlight(buf, 0, grp, row, begin, end, &res)
+		case *bnf.Stmt:
+			grp = "Operator"
+			begin = node.Begin
+			end = node.End
+			batch.AddBufferHighlight(buf, 0, grp, row, begin, end, &res)
+		case bnf.List:
+			for _, token := range node {
+				if token.Terminal {
+					grp = "String"
+				} else {
+					grp = "Identifier"
+				}
+				begin = token.Begin
+				end = token.End
+				batch.AddBufferHighlight(buf, 0, grp, row, begin, end, &res)
+			}
+		default:
+			logger.Warnf("visiting unexpected token: %T", node)
+		}
+
+		return nil
+	})
 
 	return batch.Execute()
 }

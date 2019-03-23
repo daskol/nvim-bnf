@@ -84,7 +84,7 @@ func (p *BNFParser) parseRule() (*ProductionRule, error) {
 		return nil, err
 	}
 
-	if rule.Expressions, err = p.parseExpression(); err != nil {
+	if rule.Stmt, err = p.parseExpression(); err != nil {
 		return nil, err
 	}
 
@@ -189,45 +189,52 @@ func (p *BNFParser) parseDisjunction() (*Token, error) {
 	}
 }
 
-func (p *BNFParser) parseExpression() ([]Expression, error) {
-	var ret []Expression
+func (p *BNFParser) parseExpression() (Node, error) {
+	var err error
 	var offset int
+	var ret []Expression
+	var stmt Stmt
+	var head List
+	var tail Node
+	var token *Token
 
 	// Parse single term list at first and back up position.
-	if terms, err := p.parseList(); err != nil {
+	if head, err = p.parseList(); err != nil {
 		return nil, err
 	} else {
 		offset = p.pos
-		ret = append(ret, terms)
+		ret = append(ret, head)
 	}
 
 	// Now try to parse multiple production rules.
 	if err := p.parseOptWhitespace(); err != nil {
 		p.pos = offset
-		return ret, nil
+		return head, nil
 	}
 
-	if _, err := p.parseDisjunction(); err != nil {
+	if token, err = p.parseDisjunction(); err != nil {
 		p.pos = offset
-		return ret, nil
+		return head, nil
+	} else {
+		stmt.Token = *token
 	}
 
 	if err := p.parseOptWhitespace(); err != nil {
 		p.pos = offset
-		return ret, nil
+		return head, nil
 	}
 
-	if exprs, err := p.parseExpression(); err != nil {
+	if tail, err = p.parseExpression(); err != nil {
 		p.pos = offset
-		return ret, nil
-	} else {
-		ret = append(ret, exprs...)
+		return head, nil
 	}
 
-	return ret, nil
+	stmt.Head = head
+	stmt.Tail = tail
+	return &stmt, nil
 }
 
-func (p *BNFParser) parseList() (Expression, error) {
+func (p *BNFParser) parseList() (List, error) {
 	var offset = p.pos
 	var terms []*Term
 
