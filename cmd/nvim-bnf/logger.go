@@ -5,6 +5,9 @@ import (
 	"log/syslog"
 )
 
+// logger is a global instance of logger.
+var logger *Logger
+
 // Logger is a wrapper over built-in SysLog writer. It provides API similar to
 // Logger type in standard library.
 type Logger struct {

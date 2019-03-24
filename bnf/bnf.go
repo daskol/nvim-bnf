@@ -27,8 +27,6 @@ type Node interface {
 	Left() Node
 	// Get the right child of a node.
 	Right() Node
-	// Get value which is assigned to a node.
-	Value() Node
 }
 
 // VisitorFunc is a callback type for graph traversing. Its argument is the
@@ -94,10 +92,6 @@ func (t *Term) Right() Node {
 	return nil
 }
 
-func (t *Term) Value() Node {
-	return t
-}
-
 func (t *Term) String() string {
 	var name = string(t.Name)
 	var pos = "begin=" + strconv.Itoa(t.Begin) + "; end=" + strconv.Itoa(t.End)
@@ -119,10 +113,6 @@ func (e Expression) Left() Node {
 
 func (e Expression) Right() Node {
 	return nil
-}
-
-func (e Expression) Value() Node {
-	return e
 }
 
 func (e *Expression) String() string {
@@ -147,10 +137,6 @@ func (s *Stmt) Right() Node {
 	return s.Tail
 }
 
-func (s *Stmt) Value() Node {
-	return s
-}
-
 // ProductionRule is a production rule itself. Actually, it contains several
 // rules for a non-terminal.
 type ProductionRule struct {
@@ -166,10 +152,6 @@ func (r *ProductionRule) Left() Node {
 
 func (r *ProductionRule) Right() Node {
 	return r.Stmt
-}
-
-func (r *ProductionRule) Value() Node {
-	return r
 }
 
 func (r *ProductionRule) String() string {

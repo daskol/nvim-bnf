@@ -3,15 +3,12 @@
 package main
 
 import (
-	"errors"
 	"log"
 
+	"github.com/daskol/go-client/nvim"
+	"github.com/daskol/go-client/nvim/plugin"
 	"github.com/daskol/nvim-bnf/bnf"
-	"github.com/neovim/go-client/nvim"
-	"github.com/neovim/go-client/nvim/plugin"
 )
-
-var logger *Logger
 
 var DocIndex = make(map[nvim.Buffer]*Document)
 
@@ -97,10 +94,6 @@ func (d *Document) hightlightLine(v *nvim.Nvim, buf nvim.Buffer, row int) error 
 	batch.ClearBufferHighlight(buf, -1, row, row+1)
 
 	bnf.Visit(ast.Rules[0], func(node bnf.Node) error {
-		if node == nil {
-			logger.Errorf("visiting nil node")
-		}
-
 		var grp string
 		var begin, end int
 
@@ -151,44 +144,6 @@ func HightlightHunk(v *nvim.Nvim, buf nvim.Buffer, from, to int) {
 	if doc, ok := DocIndex[buf]; ok {
 		doc.HightlightHunk(v, buf, from, to)
 	}
-}
-
-// AttachToBuffer attaches plugin to buffer's updates. This method is temporary
-// until it is supported in official Golang client.
-func AttachToBuffer(v *nvim.Nvim, buf *nvim.Buffer) error {
-	var result bool
-	var args = []interface{}{
-		buf,
-		true,
-		map[string]interface{}{},
-	}
-
-	if err := v.Invoke("nvim_buf_attach", &result, args...); err != nil {
-		return err
-	}
-
-	if !result {
-		return errors.New("nvim-bnf: result is false")
-	}
-
-	return nil
-}
-
-// DetachFromBuffer detaches plugin from buffer's updates. This method is
-// temporary until it is supported in official Golang client.
-func DetachFromBuffer(v *nvim.Nvim, buf *nvim.Buffer) error {
-	var result bool
-	var args = []interface{}{buf}
-
-	if err := v.Invoke("nvim_buf_detach", &result, args...); err != nil {
-		return err
-	}
-
-	if !result {
-		return errors.New("nvim-bnf: result is false")
-	}
-
-	return nil
 }
 
 func HandleBufReadEvent(v *nvim.Nvim, filename *string) {
