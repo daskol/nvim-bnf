@@ -20,7 +20,7 @@ func SetVirtualText(
 	opts map[string]interface{}, result *int,
 ) {
 	var args = []interface{}{buf, nsID, line, &chunks, opts}
-	b.Invoke("nvim_buf_set_virtual_text", result, args...)
+	b.Request("nvim_buf_set_virtual_text", result, args...)
 }
 
 // AttachToBuffer attaches plugin to buffer's updates. This method is temporary
@@ -33,7 +33,7 @@ func AttachToBuffer(v *nvim.Nvim, buf *nvim.Buffer) error {
 		map[string]interface{}{},
 	}
 
-	if err := v.Invoke("nvim_buf_attach", &result, args...); err != nil {
+	if err := v.Request("nvim_buf_attach", &result, args...); err != nil {
 		return err
 	}
 
@@ -50,7 +50,7 @@ func DetachFromBuffer(v *nvim.Nvim, buf *nvim.Buffer) error {
 	var result bool
 	var args = []interface{}{buf}
 
-	if err := v.Invoke("nvim_buf_detach", &result, args...); err != nil {
+	if err := v.Request("nvim_buf_detach", &result, args...); err != nil {
 		return err
 	}
 
