@@ -7,10 +7,14 @@ import (
 	"log"
 	"os"
 	"path"
+
+	"github.com/daskol/nvim-bnf/pkg/highlighting"
+	"github.com/daskol/nvim-bnf/pkg/logging"
 )
 
 var flagGenManifest bool
 var flagPluginHost string
+var logger = logging.Get()
 
 func init() {
 	flag.BoolVar(
@@ -27,12 +31,6 @@ func init() {
 }
 
 func main() {
-	if ptr, err := NewLogger(); err != nil {
-		log.Fatalf("failed to instantiate logger: %s", err)
-	} else {
-		logger = ptr
-	}
-
 	defer func() {
 		if err := logger.Close(); err != nil {
 			log.Printf("error occured during logger closing: %s", err)
@@ -41,9 +39,9 @@ func main() {
 
 	switch {
 	case flagGenManifest:
-		os.Stdout.Write(GenManifest(flagPluginHost))
+		os.Stdout.Write(highlighting.GenManifest(flagPluginHost))
 	case !flagGenManifest:
-		if err := RunPlugin(); err != nil {
+		if err := highlighting.RunPlugin(); err != nil {
 			logger.Errorf("plugin was failed: %s", err)
 		}
 	}

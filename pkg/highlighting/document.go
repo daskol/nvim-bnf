@@ -1,10 +1,10 @@
-package main
+package highlighting
 
 import (
 	"errors"
 	"runtime/debug"
 
-	"github.com/daskol/nvim-bnf/bnf"
+	"github.com/daskol/nvim-bnf/pkg/parser"
 	"github.com/neovim/go-client/nvim"
 )
 

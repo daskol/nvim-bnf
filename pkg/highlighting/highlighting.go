@@ -1,11 +1,16 @@
-package main
+// Package highlighting contains provides NeoVim RPC client for syntax
+// highlighting.
+package highlighting
 
 import (
 	"os"
 
+	"github.com/daskol/nvim-bnf/pkg/logging"
 	"github.com/neovim/go-client/nvim"
 	"github.com/neovim/go-client/nvim/plugin"
 )
+
+var logger = logging.Get()
 
 // GenManifest generates a remote plugin manifest. It is parametrized with
 // plugin host name. In this particular case host name is name of plugin
@@ -22,10 +27,11 @@ func GenManifest(host string) []byte {
 func RunPlugin() error {
 	var err error
 	var hl Highlighter
+	var log = logging.Log
 	var stdout = os.Stdout
 	os.Stdout = os.Stderr
 
-	if hl.nvim, err = nvim.New(os.Stdin, stdout, stdout, Log); err != nil {
+	if hl.nvim, err = nvim.New(os.Stdin, stdout, stdout, log); err != nil {
 		logger.Infof("failed to create neovim client")
 		return err
 	}

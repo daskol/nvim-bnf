@@ -1,12 +1,26 @@
-package main
+// Package logging provides logging facility for the project.
+package logging
 
 import (
 	"fmt"
+	"log"
 	"log/syslog"
 )
 
 // logger is a global instance of logger.
 var logger *Logger
+
+// Get layzily returns logger instance. There is only one logger for entire
+// project. In other words the function implements singleton pattern.
+func Get() *Logger {
+	if logger == nil {
+		var err error
+		if logger, err = NewLogger(); err != nil {
+			log.Fatalf("failed to instantiate logger: %s", err)
+		}
+	}
+	return logger
+}
 
 // Log is a wrapper over Logger.Infof method for providing logging facilities
 // to third-party libraries.
