@@ -13,3 +13,18 @@ the following.
         Plug 'daskol/metalanguage'
     call plug#end()
 ```
+
+## Development
+
+NeoVim requires [manifest][1] for remote plugins. There is no reason to write
+it manually since the plugin provides ability to generate manifest as follows.
+
+```bash
+    # ./nvim-bnf --gen-manifest
+    call remote#host#RegisterPlugin('nvim-bnf', '0', [
+    \ {'type': 'autocmd', 'name': 'BufNewFile', ... },
+    \ {'type': 'autocmd', 'name': 'BufRead', ... },
+    \ ])
+```
+
+[1]: https://neovim.io/doc/user/remote_plugin.html#remote-plugin-manifest

@@ -8,6 +8,12 @@ import (
 // logger is a global instance of logger.
 var logger *Logger
 
+// Log is a wrapper over Logger.Infof method for providing logging facilities
+// to third-party libraries.
+func Log(format string, args ...interface{}) {
+	logger.Infof(format, args...)
+}
+
 // Logger is a wrapper over built-in SysLog writer. It provides API similar to
 // Logger type in standard library.
 type Logger struct {
