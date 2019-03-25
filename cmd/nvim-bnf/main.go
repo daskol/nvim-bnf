@@ -5,9 +5,9 @@ package main
 import (
 	"log"
 
-	"github.com/daskol/go-client/nvim"
-	"github.com/daskol/go-client/nvim/plugin"
 	"github.com/daskol/nvim-bnf/bnf"
+	"github.com/neovim/go-client/nvim"
+	"github.com/neovim/go-client/nvim/plugin"
 )
 
 var DocIndex = make(map[nvim.Buffer]*Document)

@@ -3,7 +3,7 @@ package main
 import (
 	"errors"
 
-	"github.com/daskol/go-client/nvim"
+	"github.com/neovim/go-client/nvim"
 )
 
 // Chunk type describes part of virtual text.
