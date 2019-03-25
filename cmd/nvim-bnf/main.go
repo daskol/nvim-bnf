@@ -3,7 +3,9 @@
 package main
 
 import (
+	"errors"
 	"log"
+	"runtime/debug"
 
 	"github.com/daskol/nvim-bnf/bnf"
 	"github.com/neovim/go-client/nvim"
@@ -63,37 +65,64 @@ func (d *Document) HightlightHunk(v *nvim.Nvim, buf nvim.Buffer, from, to int) {
 	}
 
 	logger.Debugf("hightlight hunk from %d to %d", from, to)
+	var batch = v.NewBatch()
 
 	for line := from; line != to; line++ {
-		if err := d.hightlightLine(v, buf, line); err != nil {
-			logger.Warnf(
-				"failed to hightlight line %d of %s: %s",
-				line, buf, err,
-			)
+		var ast, err = d.parse(d.Lines[line])
+
+		switch {
+		case err != nil:
+			var res = 0
+			var text = "parsing error: " + err.Error()
+			var chunks = []Chunk{NewChunk(text, "Error")}
+			SetVirtualText(batch, &buf, 0, line, chunks, NoOpts, &res)
+		case err == nil:
+			if err = d.hightlightLine(batch, buf, line, ast); err != nil {
+				logger.Warnf(
+					"failed to hightlight line %d of %s: %s",
+					line, buf, err,
+				)
+			}
 		}
+	}
+
+	if err := batch.Execute(); err != nil {
+		logger.Errorf("failed to execute batch RPC call: %s", err)
 	}
 }
 
-func (d *Document) hightlightLine(v *nvim.Nvim, buf nvim.Buffer, row int) error {
+func (d *Document) parse(line []byte) (*bnf.BNF, error) {
+	var ast *bnf.BNF
+	var err error
 	defer func() {
 		// TODO(@daskol): Test parser heavily!
 		if ctx := recover(); ctx != nil {
-			logger.Errorf("recovery: %s", ctx)
+			logger.Errorf("recovery: %s\n%s", ctx, debug.Stack)
+			err = errors.New("recovery during parsing")
 		}
 	}()
 
-	var ast *bnf.BNF
-	var res int
-	var err error
-
-	if ast, err = bnf.Parse(d.Lines[row]); err != nil {
-		return err
+	// TODO(@daskol): Make more extensive parser tests!
+	if ast, err = bnf.Parse(line); err != nil {
+		logger.Warnf("failed to parse: %s", err)
+		return nil, err
+	} else if len(ast.Rules) == 0 {
+		return nil, errors.New("nvim-bnf: there is no productions")
+	} else if ast.Rules[0] == nil {
+		return nil, errors.New("nvim-bnf: rule is empty")
+	} else {
+		return ast, nil
 	}
+}
 
-	batch := v.NewBatch()
+func (d *Document) hightlightLine(
+	batch *nvim.Batch,
+	buf nvim.Buffer,
+	row int,
+	ast *bnf.BNF,
+) error {
 	batch.ClearBufferHighlight(buf, -1, row, row+1)
-
-	bnf.Visit(ast.Rules[0], func(node bnf.Node) error {
+	return bnf.Visit(ast.Rules[0], func(node bnf.Node) error {
 		var grp string
 		var begin, end int
 
@@ -102,17 +131,17 @@ func (d *Document) hightlightLine(v *nvim.Nvim, buf nvim.Buffer, row int) error 
 			grp = "Operator"
 			begin = node.Begin
 			end = node.End
-			batch.AddBufferHighlight(buf, 0, grp, row, begin, end, &res)
+			batch.AddBufferHighlight(buf, 0, grp, row, begin, end, nil)
 		case *bnf.Token:
 			grp = "Identifier"
 			begin = node.Begin
 			end = node.End
-			batch.AddBufferHighlight(buf, 0, grp, row, begin, end, &res)
+			batch.AddBufferHighlight(buf, 0, grp, row, begin, end, nil)
 		case *bnf.Stmt:
 			grp = "Operator"
 			begin = node.Begin
 			end = node.End
-			batch.AddBufferHighlight(buf, 0, grp, row, begin, end, &res)
+			batch.AddBufferHighlight(buf, 0, grp, row, begin, end, nil)
 		case bnf.List:
 			for _, token := range node {
 				if token.Terminal {
@@ -122,7 +151,7 @@ func (d *Document) hightlightLine(v *nvim.Nvim, buf nvim.Buffer, row int) error 
 				}
 				begin = token.Begin
 				end = token.End
-				batch.AddBufferHighlight(buf, 0, grp, row, begin, end, &res)
+				batch.AddBufferHighlight(buf, 0, grp, row, begin, end, nil)
 			}
 		default:
 			logger.Warnf("visiting unexpected token: %T", node)
@@ -130,8 +159,6 @@ func (d *Document) hightlightLine(v *nvim.Nvim, buf nvim.Buffer, row int) error 
 
 		return nil
 	})
-
-	return batch.Execute()
 }
 
 func HightlightDoc(v *nvim.Nvim, buf nvim.Buffer) {

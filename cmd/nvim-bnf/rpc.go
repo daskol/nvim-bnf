@@ -6,6 +6,9 @@ import (
 	"github.com/neovim/go-client/nvim"
 )
 
+// NoOpts is a value which could be passed in NeoVim RPC.
+var NoOpts = make(map[string]interface{})
+
 // Chunk type describes part of virtual text.
 type Chunk []string
 
