@@ -15,4 +15,8 @@ call remote#host#Register('nvim-bnf', 'x', function('s:RequireHost'))
 call remote#host#RegisterPlugin('nvim-bnf', '0', [
 \ {'type': 'autocmd', 'name': 'BufNewFile', 'sync': 0, 'opts': {'eval': 'expand("<afile>")', 'group': 'nvim-bnf', 'pattern': '*.bnf'}},
 \ {'type': 'autocmd', 'name': 'BufRead', 'sync': 0, 'opts': {'eval': 'expand("<afile>")', 'group': 'nvim-bnf', 'pattern': '*.bnf'}},
+\ {'type': 'function', 'name': 'BNFNcm2OnComplete', 'sync': 0, 'opts': {}},
+\ {'type': 'function', 'name': 'BNFNcm2OnWarmup', 'sync': 0, 'opts': {}},
 \ ])
+
+au User Ncm2Plugin call bnf#init()

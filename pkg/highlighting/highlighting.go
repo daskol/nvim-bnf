@@ -107,6 +107,51 @@ func (h *Highlighter) HandleBufChangedTickEvent(
 	logger.Debugf("HandleBufChangedTickEvent(%s, %d)", buf, changedTick)
 }
 
+func (h *Highlighter) HandleNcm2OnWarmup(args []interface{}) {
+	if len(args) != 1 {
+		logger.Errorf("HandleNcm2OnWarmup(): too few arguments")
+		return
+	}
+
+	var ctx, ok = args[0].(map[string]interface{})
+
+	if !ok {
+		logger.Errorf("HandleNcm2OnWarmup(): wrong argument type")
+		return
+	}
+
+	logger.Debugf("HandleNcm2OnWarmup(%s)", ctx)
+}
+
+func (h *Highlighter) HandleNcm2OnComplete(args []interface{}) {
+	if len(args) != 1 {
+		logger.Errorf("HandleNcm2OnComplete(): too few arguments")
+		return
+	}
+
+	var ctx, ok = args[0].(map[string]interface{})
+
+	if !ok {
+		logger.Errorf("HandleNcm2OnComplete(): wrong argument type")
+		return
+	}
+
+	h.handleNCM2OnComplete(ctx)
+}
+
+func (h *Highlighter) handleNCM2OnComplete(ctx map[string]interface{}) {
+	logger.Debugf("HandleNcm2OnComplete(%s)", ctx)
+	var startccol = ctx["startccol"].(int64)
+	var matches = []map[string]interface{}{}
+
+	err := h.nvim.Call("ncm2#complete", nil, ctx, startccol, matches)
+
+	if err != nil {
+		logger.Errorf("failed call ncm2#complete: %s", err)
+		return
+	}
+}
+
 func (h *Highlighter) Serve() error {
 	return h.nvim.Serve()
 }
@@ -114,6 +159,19 @@ func (h *Highlighter) Serve() error {
 func (h *Highlighter) registerHandlers() error {
 	h.registerVimLExtHandlers()
 	return h.registerEventHandlers()
+}
+
+func (h *Highlighter) registerAutocmdHandlers() {
+	// Register autocommands.
+	for _, event := range []string{"BufRead", "BufNewFile"} {
+		var opts = &plugin.AutocmdOptions{
+			Event:   event,
+			Group:   "nvim-bnf",
+			Pattern: "*.bnf",
+			Eval:    `expand("<afile>")`,
+		}
+		h.plugin.HandleAutocmd(opts, h.HandleBufReadEvent)
+	}
 }
 
 func (h *Highlighter) registerEventHandlers() error {
@@ -137,15 +195,23 @@ func (h *Highlighter) registerEventHandlers() error {
 	return nil
 }
 
-func (h *Highlighter) registerVimLExtHandlers() {
-	// Register autocommands.
-	for _, event := range []string{"BufRead", "BufNewFile"} {
-		var opts = &plugin.AutocmdOptions{
-			Event:   event,
-			Group:   "nvim-bnf",
-			Pattern: "*.bnf",
-			Eval:    `expand("<afile>")`,
-		}
-		h.plugin.HandleAutocmd(opts, h.HandleBufReadEvent)
+func (h *Highlighter) registerFunctionHandlers() {
+	type FuncOpts = plugin.FunctionOptions
+	var functions = []struct {
+		name    string
+		handler interface{}
+	}{
+		{"BNFNcm2OnWarmup", h.HandleNcm2OnWarmup},
+		{"BNFNcm2OnComplete", h.HandleNcm2OnComplete},
 	}
+
+	// Register event handlers during loading in operational mode.
+	for _, proc := range functions {
+		h.plugin.HandleFunction(&FuncOpts{Name: proc.name}, proc.handler)
+	}
+}
+
+func (h *Highlighter) registerVimLExtHandlers() {
+	h.registerAutocmdHandlers()
+	h.registerFunctionHandlers()
 }
