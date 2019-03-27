@@ -139,12 +139,21 @@ func (h *Highlighter) HandleNcm2OnComplete(args []interface{}) {
 	h.handleNCM2OnComplete(ctx)
 }
 
+func (h *Highlighter) getCompletions() []map[string]interface{} {
+	var matches = make([]map[string]interface{}, 0, len(NonTerminalIndex))
+	for word := range NonTerminalIndex {
+		matches = append(matches, map[string]interface{}{
+			"word": word,
+		})
+	}
+	return matches
+}
+
 func (h *Highlighter) handleNCM2OnComplete(ctx map[string]interface{}) {
 	logger.Debugf("HandleNcm2OnComplete(%s)", ctx)
 	var startccol = ctx["startccol"].(int64)
-	var matches = []map[string]interface{}{}
-
-	err := h.nvim.Call("ncm2#complete", nil, ctx, startccol, matches)
+	var matches = h.getCompletions()
+	var err = h.nvim.Call("ncm2#complete", nil, ctx, startccol, matches)
 
 	if err != nil {
 		logger.Errorf("failed call ncm2#complete: %s", err)

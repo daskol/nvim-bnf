@@ -9,6 +9,7 @@ import (
 )
 
 var DocIndex = make(map[nvim.Buffer]*Document)
+var NonTerminalIndex = make(map[string]uint)
 
 // Document is a mirrored content of NeoVim buffer. This object provides
 // human-readable interface for document management, hightlighting and
@@ -73,6 +74,10 @@ func (d *Document) HightlightHunk(v *nvim.Nvim, buf nvim.Buffer, from, to int) {
 			var chunks = []Chunk{NewChunk(text, "Error")}
 			SetVirtualText(batch, &buf, 0, line, chunks, NoOpts, &res)
 		case err == nil:
+			if err = d.updateCompletionIndex(ast); err != nil {
+				logger.Warnf("failed to update completion index: %s", err)
+			}
+
 			if err = d.hightlightLine(batch, buf, line, ast); err != nil {
 				logger.Warnf(
 					"failed to hightlight line %d of %s: %s",
@@ -151,6 +156,27 @@ func (d *Document) hightlightLine(
 			}
 		default:
 			logger.Warnf("visiting unexpected token: %T", node)
+		}
+
+		return nil
+	})
+}
+
+func (d *Document) updateCompletionIndex(ast *bnf.BNF) error {
+	return bnf.Visit(ast.Rules[0], func(node bnf.Node) error {
+		switch node := node.(type) {
+		case *bnf.Token:
+			if !node.Terminal {
+				var counter = NonTerminalIndex[string(node.Name)]
+				NonTerminalIndex[string(node.Name)] = counter + 1
+			}
+		case bnf.List:
+			for _, token := range node {
+				if !token.Terminal {
+					var counter = NonTerminalIndex[string(token.Name)]
+					NonTerminalIndex[string(token.Name)] = counter + 1
+				}
+			}
 		}
 
 		return nil
