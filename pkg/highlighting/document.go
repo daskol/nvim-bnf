@@ -92,8 +92,8 @@ func (d *Document) HightlightHunk(v *nvim.Nvim, buf nvim.Buffer, from, to int) {
 	}
 }
 
-func (d *Document) parse(line []byte) (*bnf.BNF, error) {
-	var ast *bnf.BNF
+func (d *Document) parse(line []byte) (*parser.BNF, error) {
+	var ast *parser.BNF
 	var err error
 	defer func() {
 		// TODO(@daskol): Test parser heavily!
@@ -104,7 +104,7 @@ func (d *Document) parse(line []byte) (*bnf.BNF, error) {
 	}()
 
 	// TODO(@daskol): Make more extensive parser tests!
-	if ast, err = bnf.Parse(line); err != nil {
+	if ast, err = parser.Parse(line); err != nil {
 		logger.Warnf("failed to parse: %s", err)
 		return nil, err
 	} else if len(ast.Rules) == 0 {
@@ -120,30 +120,30 @@ func (d *Document) hightlightLine(
 	batch *nvim.Batch,
 	buf nvim.Buffer,
 	row int,
-	ast *bnf.BNF,
+	ast *parser.BNF,
 ) error {
 	batch.ClearBufferHighlight(buf, -1, row, row+1)
-	return bnf.Visit(ast.Rules[0], func(node bnf.Node) error {
+	return parser.Visit(ast.Rules[0], func(node parser.Node) error {
 		var grp string
 		var begin, end, res int
 
 		switch node := node.(type) {
-		case *bnf.ProductionRule:
+		case *parser.ProductionRule:
 			grp = "Operator"
 			begin = node.Begin
 			end = node.End
 			batch.AddBufferHighlight(buf, 0, grp, row, begin, end, &res)
-		case *bnf.Token:
+		case *parser.Token:
 			grp = "Identifier"
 			begin = node.Begin
 			end = node.End
 			batch.AddBufferHighlight(buf, 0, grp, row, begin, end, &res)
-		case *bnf.Stmt:
+		case *parser.Stmt:
 			grp = "Operator"
 			begin = node.Begin
 			end = node.End
 			batch.AddBufferHighlight(buf, 0, grp, row, begin, end, &res)
-		case bnf.List:
+		case parser.List:
 			for _, token := range node {
 				if token.Terminal {
 					grp = "String"
@@ -162,15 +162,15 @@ func (d *Document) hightlightLine(
 	})
 }
 
-func (d *Document) updateCompletionIndex(ast *bnf.BNF) error {
-	return bnf.Visit(ast.Rules[0], func(node bnf.Node) error {
+func (d *Document) updateCompletionIndex(ast *parser.BNF) error {
+	return parser.Visit(ast.Rules[0], func(node parser.Node) error {
 		switch node := node.(type) {
-		case *bnf.Token:
+		case *parser.Token:
 			if !node.Terminal {
 				var counter = NonTerminalIndex[string(node.Name)]
 				NonTerminalIndex[string(node.Name)] = counter + 1
 			}
-		case bnf.List:
+		case parser.List:
 			for _, token := range node {
 				if !token.Terminal {
 					var counter = NonTerminalIndex[string(token.Name)]
