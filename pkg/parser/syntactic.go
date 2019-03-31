@@ -18,11 +18,11 @@ func NewSyntacticParser(reader io.Reader) *SyntacticParser {
 	return &SyntacticParser{Reader: reader}
 }
 
-func (p *SyntacticParser) Parse() (*BNF, error) {
+func (p *SyntacticParser) Parse() (*AST, error) {
 	if rules, err := p.parseSyntax(); err != nil {
 		return nil, &Error{err, p.pos + 1}
 	} else {
-		return &BNF{rules}, nil
+		return &AST{rules: rules, semantic: false}, nil
 	}
 }
 

@@ -15,7 +15,7 @@ func NewSemanticParser(reader io.Reader) *SemanticParser {
 	return &SemanticParser{SyntacticParser: *NewSyntacticParser(reader)}
 }
 
-func (p *SemanticParser) Parse() (*BNF, error) {
+func (p *SemanticParser) Parse() (*AST, error) {
 	if bytes, err := ioutil.ReadAll(p.Reader); err != nil {
 		return nil, err
 	} else {
@@ -26,7 +26,7 @@ func (p *SemanticParser) Parse() (*BNF, error) {
 	if rules, err := p.parseSyntax(); err != nil {
 		return nil, &Error{err, p.pos + 1}
 	} else {
-		return &BNF{rules}, nil
+		return &AST{rules: rules, semantic: true}, nil
 	}
 }
 

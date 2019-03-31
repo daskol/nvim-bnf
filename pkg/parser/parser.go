@@ -162,23 +162,62 @@ func (r *ProductionRule) String() string {
 	return r.Name.String() + " -> " + strings.Join(parts, " | ")
 }
 
-// AST type corresponds parsed BNF grammar.
+// AST type corresponds parsed BNF grammar. We use the same AST type for both
+// semantic parse tree and syntactic parse tree (which is actually a list of
+// lists).
 type AST struct {
-	Rules []*ProductionRule
+	// List of lists of terms. Each list corresponds to each line of the
+	// source.
+	lemmes [][]Node
+	// List of production rules. Each production rule is a line in the source.
+	rules []*ProductionRule
+	// True if the AST was produced be semantic parser.
+	semantic bool
 }
 
-type BNF = AST
+func (ast *AST) NoRules() int {
+	if ast.semantic {
+		return len(ast.rules)
+	} else {
+		return len(ast.lemmes)
+	}
+}
+
+// TODO(@daskol): The method will be removed later.
+func (ast *AST) Rules() []*ProductionRule {
+	return ast.rules
+}
 
 func (ast *AST) String() string {
-	var rules []string
-	for _, rule := range ast.Rules {
-		rules = append(rules, rule.String())
+	var norules = ast.NoRules()
+	return "<AST norules=" + strconv.Itoa(norules) + ";>"
+}
+
+func (ast *AST) Traverse(visitor VisitorFunc) error {
+	if ast.semantic {
+		return ast.traverseSemanticTree(visitor)
+	} else {
+		return ast.traverseSyntacticTree(visitor)
 	}
-	return strings.Join(rules, "\n")
+}
+
+func (ast *AST) traverseSemanticTree(visitor VisitorFunc) error {
+	// TODO(@daskol): Remove this tests in the future!
+	if len(ast.rules) == 0 {
+		return errors.New("bnf: there is no productions")
+	} else if ast.rules[0] == nil {
+		return errors.New("bnf: rule is empty")
+	} else {
+		return Visit(ast.rules[0], visitor)
+	}
+}
+
+func (ast *AST) traverseSyntacticTree(visitor VisitorFunc) error {
+	return ErrNotImplemented
 }
 
 // Parse parses BNF grammar.
-func Parse(source []byte) (*BNF, error) {
+func Parse(source []byte) (*AST, error) {
 	return (&SemanticParser{
 		SyntacticParser{Reader: bytes.NewBuffer(source)},
 	}).Parse()

@@ -18,13 +18,13 @@ func TestSemanticParser(t *testing.T) {
 	t.Run("US Postal Address", func(t *testing.T) {
 		var content = readBNFFile(t, "us-postal-address.bnf")
 		var parser = NewSemanticParser(bytes.NewBuffer(content))
-		var bnf, err = parser.Parse()
+		var ast, err = parser.Parse()
 
 		if err != nil {
 			t.Fatalf("failed to parse grammar: %s", err)
 		}
 
-		if length := len(bnf.Rules); length != 7 {
+		if length := ast.NoRules(); length != 7 {
 			t.Errorf("too a few production rules: %d", length)
 		}
 	})
@@ -32,13 +32,13 @@ func TestSemanticParser(t *testing.T) {
 	t.Run("BNF", func(t *testing.T) {
 		var content = readBNFFile(t, "bnf.bnf")
 		var parser = NewSemanticParser(bytes.NewBuffer(content))
-		var bnf, err = parser.Parse()
+		var ast, err = parser.Parse()
 
 		if err != nil {
 			t.Fatalf("failed to parse grammar: %s", err)
 		}
 
-		if length := len(bnf.Rules); length != 18 {
+		if length := ast.NoRules(); length != 18 {
 			t.Errorf("too a few production rules: %d", length)
 		}
 	})
