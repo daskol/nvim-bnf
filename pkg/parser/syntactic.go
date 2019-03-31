@@ -1,8 +1,8 @@
 package parser
 
 import (
+	"bufio"
 	"io"
-	"io/ioutil"
 )
 
 // SyntacticParser performs lexical parsing of the input according definition
@@ -15,13 +15,6 @@ type SyntacticParser struct {
 }
 
 func (p *SyntacticParser) Parse() (*BNF, error) {
-	if bytes, err := ioutil.ReadAll(p.Reader); err != nil {
-		return nil, err
-	} else {
-		p.buf = bytes
-		p.pos = 0
-	}
-
 	if rules, err := p.parseSyntax(); err != nil {
 		return nil, &Error{err, p.pos + 1}
 	} else {
@@ -38,11 +31,52 @@ func (p *SyntacticParser) eof() error {
 }
 
 func (p *SyntacticParser) parseSyntax() ([]*ProductionRule, error) {
-	return nil, ErrNotImplemented
+	var rules []*ProductionRule
+	var scanner = bufio.NewScanner(p.Reader)
+
+	for scanner.Scan() {
+		// Reset parser state with the new line.
+		p.buf = []byte(scanner.Text())
+		p.pos = 0
+
+		// Parse every single line and ignore parsing errors.
+		if _, err := p.parseRule(); err == nil {
+			// TODO(@daskol): rules = append(rules, rule)
+		}
+	}
+
+	return rules, scanner.Err()
 }
 
-func (p *SyntacticParser) parseRule() (*ProductionRule, error) {
-	return nil, ErrNotImplemented
+func (p *SyntacticParser) parseRule() (interface{}, error) {
+	var tokens []interface{}
+
+	// Try to apply lexeme parser to every position at line.
+	for p.pos < len(p.buf) {
+		if tok, err := p.parseDisjunction(); err == nil {
+			tokens = append(tokens, tok)
+			continue
+		}
+
+		if tok, err := p.parseDefinitionSimbol(); err == nil {
+			tokens = append(tokens, tok)
+			continue
+		}
+
+		if tok, err := p.parseRuleName(); err == nil {
+			tokens = append(tokens, tok)
+			continue
+		}
+
+		if tok, err := p.parseLiteral(); err == nil {
+			tokens = append(tokens, tok)
+			continue
+		}
+
+		p.pos++
+	}
+
+	return tokens, ErrNotImplemented
 }
 
 func (p *SyntacticParser) parseRuleName() ([]byte, error) {

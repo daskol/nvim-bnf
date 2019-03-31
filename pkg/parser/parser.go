@@ -178,6 +178,6 @@ func (bnf *BNF) String() string {
 // Parse parses BNF grammar.
 func Parse(source []byte) (*BNF, error) {
 	return (&SemanticParser{
-		Reader: bytes.NewBuffer(source),
+		SyntacticParser{Reader: bytes.NewBuffer(source)},
 	}).Parse()
 }
