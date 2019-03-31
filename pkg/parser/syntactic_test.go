@@ -1,21 +1,15 @@
 package parser
 
 import (
-	"io/ioutil"
+	"bytes"
 	"testing"
 )
 
-func readBNFFile(t *testing.T, filename string) []byte {
-	var bytes, err = ioutil.ReadFile("testdata/" + filename)
-	if err != nil {
-		t.Fatalf("failed to read file: %s", err)
-	}
-	return bytes
-}
-
-func TestParse(t *testing.T) {
+func TestSyntacticParser(t *testing.T) {
 	t.Run("US Postal Address", func(t *testing.T) {
-		var bnf, err = Parse(readBNFFile(t, "us-postal-address.bnf"))
+		var content = readBNFFile(t, "us-postal-address.bnf")
+		var parser = NewSyntacticParser(bytes.NewBuffer(content))
+		var bnf, err = parser.Parse()
 
 		if err != nil {
 			t.Fatalf("failed to parse grammar: %s", err)
@@ -27,7 +21,9 @@ func TestParse(t *testing.T) {
 	})
 
 	t.Run("BNF", func(t *testing.T) {
-		var bnf, err = Parse(readBNFFile(t, "bnf.bnf"))
+		var content = readBNFFile(t, "bnf.bnf")
+		var parser = NewSyntacticParser(bytes.NewBuffer(content))
+		var bnf, err = parser.Parse()
 
 		if err != nil {
 			t.Fatalf("failed to parse grammar: %s", err)

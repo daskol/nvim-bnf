@@ -11,6 +11,10 @@ type SemanticParser struct {
 	SyntacticParser
 }
 
+func NewSemanticParser(reader io.Reader) *SemanticParser {
+	return &SemanticParser{SyntacticParser: *NewSyntacticParser(reader)}
+}
+
 func (p *SemanticParser) Parse() (*BNF, error) {
 	if bytes, err := ioutil.ReadAll(p.Reader); err != nil {
 		return nil, err

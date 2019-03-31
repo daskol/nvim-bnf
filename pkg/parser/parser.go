@@ -162,14 +162,16 @@ func (r *ProductionRule) String() string {
 	return r.Name.String() + " -> " + strings.Join(parts, " | ")
 }
 
-// BNF types corresponds parsed BNF grammar.
-type BNF struct {
+// AST type corresponds parsed BNF grammar.
+type AST struct {
 	Rules []*ProductionRule
 }
 
-func (bnf *BNF) String() string {
+type BNF = AST
+
+func (ast *AST) String() string {
 	var rules []string
-	for _, rule := range bnf.Rules {
+	for _, rule := range ast.Rules {
 		rules = append(rules, rule.String())
 	}
 	return strings.Join(rules, "\n")

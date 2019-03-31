@@ -14,6 +14,10 @@ type SyntacticParser struct {
 	pos int
 }
 
+func NewSyntacticParser(reader io.Reader) *SyntacticParser {
+	return &SyntacticParser{Reader: reader}
+}
+
 func (p *SyntacticParser) Parse() (*BNF, error) {
 	if rules, err := p.parseSyntax(); err != nil {
 		return nil, &Error{err, p.pos + 1}
@@ -51,7 +55,11 @@ func (p *SyntacticParser) parseSyntax() ([]*ProductionRule, error) {
 func (p *SyntacticParser) parseRule() (interface{}, error) {
 	var tokens []interface{}
 
-	// Try to apply lexeme parser to every position at line.
+	// Try to apply lexeme parser to every position at line. Since parsing of
+	// simplified grammar which contains only operators `::=` and `|` and
+	// terminal and non-terminal symbols requires only one look-a-head
+	// character, then we can skip parsing other tokens if the current parsing
+	// attempt were successfull.
 	for p.pos < len(p.buf) {
 		if tok, err := p.parseDisjunction(); err == nil {
 			tokens = append(tokens, tok)
@@ -151,6 +159,12 @@ func (p *SyntacticParser) parseDefinitionSimbol() (*Token, error) {
 	const name = "::="
 	var token = Token{Name: []byte(name), Begin: p.pos, End: p.pos + 3}
 
+	// Out of buffer check.
+	if p.pos+len(name) >= len(p.buf) {
+		return nil, io.EOF
+	}
+
+	// Is there expected characters.
 	if string(p.buf[p.pos:p.pos+3]) != name {
 		return nil, ErrUnexpectedChar
 	} else {
