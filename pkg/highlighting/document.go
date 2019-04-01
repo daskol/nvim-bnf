@@ -103,14 +103,9 @@ func (d *Document) parse(line []byte) (*parser.AST, error) {
 		}
 	}()
 
-	// TODO(@daskol): Make more extensive parser tests!
 	if ast, err = parser.Parse(line); err != nil {
 		logger.Warnf("failed to parse: %s", err)
 		return nil, err
-	} else if ast.NoRules() == 0 {
-		return nil, errors.New("nvim-bnf: there is no productions")
-	} else if ast.Rules()[0] == nil {
-		return nil, errors.New("nvim-bnf: rule is empty")
 	} else {
 		return ast, nil
 	}
@@ -123,7 +118,7 @@ func (d *Document) hightlightLine(
 	ast *parser.AST,
 ) error {
 	batch.ClearBufferHighlight(buf, -1, row, row+1)
-	return parser.Visit(ast.Rules()[0], func(node parser.Node) error {
+	return ast.Traverse(func(node parser.Node) error {
 		var grp string
 		var begin, end, res int
 
@@ -134,7 +129,11 @@ func (d *Document) hightlightLine(
 			end = node.End
 			batch.AddBufferHighlight(buf, 0, grp, row, begin, end, &res)
 		case *parser.Token:
-			grp = "Identifier"
+			if node.Terminal {
+				grp = "String"
+			} else {
+				grp = "Identifier"
+			}
 			begin = node.Begin
 			end = node.End
 			batch.AddBufferHighlight(buf, 0, grp, row, begin, end, &res)
@@ -163,7 +162,7 @@ func (d *Document) hightlightLine(
 }
 
 func (d *Document) updateCompletionIndex(ast *parser.AST) error {
-	return parser.Visit(ast.Rules()[0], func(node parser.Node) error {
+	return ast.Traverse(func(node parser.Node) error {
 		switch node := node.(type) {
 		case *parser.Token:
 			if !node.Terminal {

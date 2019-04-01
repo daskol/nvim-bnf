@@ -4,6 +4,7 @@ package parser
 import (
 	"bytes"
 	"errors"
+	"io"
 	"strconv"
 	"strings"
 )
@@ -102,22 +103,20 @@ func (t *Term) String() string {
 	return "<Term name=" + name + "; terminal=" + terminal + "; " + pos + ">"
 }
 
-type List = Expression
+// List is a list of terminals and non-terminals.
+type List []*Term
 
-// Expression is a list of terminals and non-terminals.
-type Expression []*Term
-
-func (e Expression) Left() Node {
+func (l List) Left() Node {
 	return nil
 }
 
-func (e Expression) Right() Node {
+func (l List) Right() Node {
 	return nil
 }
 
-func (e *Expression) String() string {
+func (l *List) String() string {
 	var parts []string
-	for _, term := range *e {
+	for _, term := range *l {
 		parts = append(parts, term.String())
 	}
 	return strings.Join(parts, " ")
@@ -140,10 +139,9 @@ func (s *Stmt) Right() Node {
 // ProductionRule is a production rule itself. Actually, it contains several
 // rules for a non-terminal.
 type ProductionRule struct {
-	Token       // Points to lexeme that contains `::=`.
-	Name        *Term
-	Stmt        Node
-	Expressions []Expression
+	Token // Points to lexeme that contains `::=`.
+	Name  *Term
+	Stmt  Node
 }
 
 func (r *ProductionRule) Left() Node {
@@ -183,11 +181,6 @@ func (ast *AST) NoRules() int {
 	}
 }
 
-// TODO(@daskol): The method will be removed later.
-func (ast *AST) Rules() []*ProductionRule {
-	return ast.rules
-}
-
 func (ast *AST) String() string {
 	var norules = ast.NoRules()
 	return "<AST norules=" + strconv.Itoa(norules) + ";>"
@@ -213,12 +206,22 @@ func (ast *AST) traverseSemanticTree(visitor VisitorFunc) error {
 }
 
 func (ast *AST) traverseSyntacticTree(visitor VisitorFunc) error {
-	return ErrNotImplemented
+	for _, node := range ast.lemmes[0] {
+		if err := visitor(node); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // Parse parses BNF grammar.
 func Parse(source []byte) (*AST, error) {
-	return (&SemanticParser{
-		SyntacticParser{Reader: bytes.NewBuffer(source)},
-	}).Parse()
+	var origin bytes.Buffer
+	var replica = io.TeeReader(bytes.NewBuffer(source), &origin)
+
+	if ast, err := NewSemanticParser(replica).Parse(); err == nil {
+		return ast, nil
+	}
+
+	return NewSyntacticParser(&origin).Parse()
 }

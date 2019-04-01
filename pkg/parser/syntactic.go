@@ -19,10 +19,10 @@ func NewSyntacticParser(reader io.Reader) *SyntacticParser {
 }
 
 func (p *SyntacticParser) Parse() (*AST, error) {
-	if rules, err := p.parseSyntax(); err != nil {
+	if lemmes, err := p.parseSyntax(); err != nil {
 		return nil, &Error{err, p.pos + 1}
 	} else {
-		return &AST{rules: rules, semantic: false}, nil
+		return &AST{lemmes: lemmes, semantic: false}, nil
 	}
 }
 
@@ -34,8 +34,8 @@ func (p *SyntacticParser) eof() error {
 	}
 }
 
-func (p *SyntacticParser) parseSyntax() ([]*ProductionRule, error) {
-	var rules []*ProductionRule
+func (p *SyntacticParser) parseSyntax() ([][]Node, error) {
+	var rules [][]Node
 	var scanner = bufio.NewScanner(p.Reader)
 
 	for scanner.Scan() {
@@ -44,16 +44,16 @@ func (p *SyntacticParser) parseSyntax() ([]*ProductionRule, error) {
 		p.pos = 0
 
 		// Parse every single line and ignore parsing errors.
-		if _, err := p.parseRule(); err == nil {
-			// TODO(@daskol): rules = append(rules, rule)
+		if rule, err := p.parseRule(); err == nil {
+			rules = append(rules, rule)
 		}
 	}
 
 	return rules, scanner.Err()
 }
 
-func (p *SyntacticParser) parseRule() (interface{}, error) {
-	var tokens []interface{}
+func (p *SyntacticParser) parseRule() ([]Node, error) {
+	var tokens []Node
 
 	// Try to apply lexeme parser to every position at line. Since parsing of
 	// simplified grammar which contains only operators `::=` and `|` and
@@ -62,21 +62,18 @@ func (p *SyntacticParser) parseRule() (interface{}, error) {
 	// attempt were successfull.
 	for p.pos < len(p.buf) {
 		if tok, err := p.parseDisjunction(); err == nil {
-			tokens = append(tokens, tok)
+			stmt := &Stmt{Token: *tok}
+			tokens = append(tokens, stmt)
 			continue
 		}
 
 		if tok, err := p.parseDefinitionSimbol(); err == nil {
-			tokens = append(tokens, tok)
+			rule := &ProductionRule{Token: *tok}
+			tokens = append(tokens, rule)
 			continue
 		}
 
-		if tok, err := p.parseRuleName(); err == nil {
-			tokens = append(tokens, tok)
-			continue
-		}
-
-		if tok, err := p.parseLiteral(); err == nil {
+		if tok, err := p.parseTerm(); err == nil {
 			tokens = append(tokens, tok)
 			continue
 		}
@@ -84,7 +81,7 @@ func (p *SyntacticParser) parseRule() (interface{}, error) {
 		p.pos++
 	}
 
-	return tokens, ErrNotImplemented
+	return tokens, nil
 }
 
 func (p *SyntacticParser) parseRuleName() ([]byte, error) {
@@ -188,7 +185,7 @@ func (p *SyntacticParser) parseDisjunction() (*Token, error) {
 func (p *SyntacticParser) parseExpression() (Node, error) {
 	var err error
 	var offset int
-	var ret []Expression
+	var ret []List
 	var stmt Stmt
 	var head List
 	var tail Node
