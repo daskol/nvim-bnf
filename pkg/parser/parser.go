@@ -103,6 +103,11 @@ func (t *Term) String() string {
 	return "<Term name=" + name + "; terminal=" + terminal + "; " + pos + ">"
 }
 
+// Comment is a lexeme that encode comment in a source code.
+type Comment struct {
+	Token
+}
+
 // List is a list of terminals and non-terminals.
 type List []*Term
 

@@ -153,6 +153,11 @@ func (d *Document) hightlightLine(
 				end = token.End
 				batch.AddBufferHighlight(buf, 0, grp, row, begin, end, &res)
 			}
+		case *parser.Comment:
+			grp = "Comment"
+			begin = node.Begin
+			end = node.End
+			batch.AddBufferHighlight(buf, 0, grp, row, begin, end, &res)
 		default:
 			logger.Warnf("visiting unexpected token: %T", node)
 		}

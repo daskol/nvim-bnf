@@ -52,6 +52,23 @@ func (p *SyntacticParser) parseSyntax() ([][]Node, error) {
 	return rules, scanner.Err()
 }
 
+func (p *SyntacticParser) parseComment() (*Comment, error) {
+	var token = Token{Begin: p.pos}
+
+	if p.buf[p.pos] != ';' {
+		return nil, ErrUnexpectedChar
+	}
+
+	for token.End = p.pos + 1; token.End != len(p.buf); token.End++ {
+		if p.buf[token.End] == '\n' || p.buf[token.End] == byte(0) {
+			break
+		}
+	}
+
+	p.pos = token.End
+	return &Comment{token}, nil
+}
+
 func (p *SyntacticParser) parseRule() ([]Node, error) {
 	var tokens []Node
 
@@ -74,6 +91,12 @@ func (p *SyntacticParser) parseRule() ([]Node, error) {
 		}
 
 		if tok, err := p.parseTerm(); err == nil {
+			tokens = append(tokens, tok)
+			continue
+		}
+
+		if tok, err := p.parseComment(); err == nil {
+			logger.Infof("parseComment() -> %s", tok)
 			tokens = append(tokens, tok)
 			continue
 		}
