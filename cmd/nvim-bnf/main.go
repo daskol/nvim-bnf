@@ -14,6 +14,7 @@ import (
 
 var flagGenManifest bool
 var flagPluginHost string
+var flagVerbosity string
 var logger = logging.Get()
 
 func init() {
@@ -27,6 +28,11 @@ func init() {
 		"host",
 		path.Base(os.Args[0]),
 		"Set host name for manifest generator")
+	flag.StringVar(
+		&flagVerbosity,
+		"verbosity",
+		"info",
+		"Set logging level: debug, info, notice, warning, error")
 	flag.Parse()
 }
 
@@ -36,6 +42,8 @@ func main() {
 			log.Printf("error occured during logger closing: %s", err)
 		}
 	}()
+
+	logger.SetLevel(flagVerbosity)
 
 	switch {
 	case flagGenManifest:
