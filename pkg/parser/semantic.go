@@ -99,3 +99,76 @@ func (p *SemanticParser) parseRule() (*ProductionRule, error) {
 
 	return rule, nil
 }
+
+func (p *SemanticParser) parseExpression() (Node, error) {
+	var err error
+	var offset int
+	var ret []List
+	var stmt Stmt
+	var head List
+	var tail Node
+	var token *Token
+
+	// Parse single term list at first and back up position.
+	if head, err = p.parseList(); err != nil {
+		return nil, err
+	} else {
+		offset = p.pos
+		ret = append(ret, head)
+	}
+
+	// Now try to parse multiple production rules.
+	if err := p.parseOptWhitespace(); err != nil {
+		p.pos = offset
+		return head, nil
+	}
+
+	if token, err = p.parseDisjunction(); err != nil {
+		p.pos = offset
+		return head, nil
+	} else {
+		stmt.Token = *token
+	}
+
+	if err := p.parseOptWhitespace(); err != nil {
+		p.pos = offset
+		return head, nil
+	}
+
+	if tail, err = p.parseExpression(); err != nil {
+		p.pos = offset
+		return head, nil
+	}
+
+	stmt.Head = head
+	stmt.Tail = tail
+	return &stmt, nil
+}
+
+func (p *SemanticParser) parseList() (List, error) {
+	var offset = p.pos
+	var terms []*Term
+
+	if term, err := p.parseTerm(); err != nil {
+		return nil, err
+	} else {
+		terms = append(terms, term)
+	}
+
+	for {
+		offset = p.pos
+
+		if err := p.parseOptWhitespace(); err != nil {
+			break
+		}
+
+		if term, err := p.parseTerm(); err != nil {
+			break
+		} else {
+			terms = append(terms, term)
+		}
+	}
+
+	p.pos = offset
+	return terms, nil
+}
