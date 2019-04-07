@@ -79,24 +79,23 @@ func (p *SyntacticParser) parseRule() ([]Node, error) {
 	// attempt were successfull.
 	for p.pos < len(p.buf) {
 		if tok, err := p.parseDisjunction(); err == nil {
-			stmt := &Stmt{Token: *tok}
-			tokens = append(tokens, stmt)
+			var expr = Expression{Token: *tok}
+			tokens = append(tokens, &AlternativeExpression{expr})
 			continue
 		}
 
 		if tok, err := p.parseDefinitionSimbol(); err == nil {
-			rule := &ProductionRule{Token: *tok}
-			tokens = append(tokens, rule)
+			var expr = Expression{Token: *tok}
+			tokens = append(tokens, &AssignmentExpression{expr})
 			continue
 		}
 
-		if tok, err := p.parseTerm(); err == nil {
+		if tok, err := p.parseAtom(); err == nil {
 			tokens = append(tokens, tok)
 			continue
 		}
 
 		if tok, err := p.parseComment(); err == nil {
-			logger.Infof("parseComment() -> %s", tok)
 			tokens = append(tokens, tok)
 			continue
 		}
@@ -205,12 +204,12 @@ func (p *SyntacticParser) parseDisjunction() (*Token, error) {
 	}
 }
 
-func (p *SyntacticParser) parseTerm() (*Term, error) {
+func (p *SyntacticParser) parseAtom() (Node, error) {
 	var begin = p.pos
 
 	// Parse terminal literal.
 	if literal, err := p.parseLiteral(); err == nil {
-		return &Term{literal, true, begin, p.pos}, nil
+		return &Terminal{Token{literal, begin, p.pos}}, nil
 	}
 
 	// Parse non-terminal.
@@ -268,16 +267,16 @@ func (p *SyntacticParser) parseLiteral() ([]byte, error) {
 	return literal, nil
 }
 
-func (p *SyntacticParser) parseNonTerminal() (*Term, error) {
+func (p *SyntacticParser) parseNonTerminal() (Node, error) {
 	var err error
-	var nonTerminal = new(Term)
+	var token Token
 	var begin = p.pos
 
 	if _, err := p.parseLAngle(); err != nil {
 		return nil, err
 	}
 
-	if nonTerminal.Name, err = p.parseRuleName(); err != nil {
+	if token.Name, err = p.parseRuleName(); err != nil {
 		return nil, err
 	}
 
@@ -285,9 +284,9 @@ func (p *SyntacticParser) parseNonTerminal() (*Term, error) {
 		return nil, err
 	}
 
-	nonTerminal.Begin = begin
-	nonTerminal.End = p.pos
-	return nonTerminal, nil
+	token.Begin = begin
+	token.End = p.pos
+	return &NonTerminal{token}, nil
 }
 
 func (p *SyntacticParser) parseLineEnd() error {

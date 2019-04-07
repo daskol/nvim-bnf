@@ -6,7 +6,6 @@ import (
 	"errors"
 	"io"
 	"strconv"
-	"strings"
 )
 
 var ErrNotImplemented = errors.New("bnf: not implemented")
@@ -22,20 +21,64 @@ func (e *Error) Error() string {
 	return e.err.Error() + " at position " + strconv.Itoa(e.pos)
 }
 
-// Node is a node of binary tree. In each node of a tree there is a token.
-type Node interface {
-	// Get the left child of a node.
-	Left() Node
-	// Get the right child of a node.
-	Right() Node
+// AST type corresponds parsed BNF grammar. We use the same AST type for both
+// semantic parse tree and syntactic parse tree (which is actually a list of
+// lists).
+type AST struct {
+	// List of lists of terms. Each list corresponds to each line of the
+	// source.
+	lemmes [][]Node
+	// List of production rules. Each production rule is a line in the source.
+	rules []*Statement
+	// True if the AST was produced be semantic parser.
+	semantic bool
 }
 
-// VisitorFunc is a callback type for graph traversing. Its argument is the
-// current node of traversing.
-type VisitorFunc func(Node) error
+// NoRules gets the number of parsed rules.
+func (ast *AST) NoRules() int {
+	if ast.semantic {
+		return len(ast.rules)
+	} else {
+		return len(ast.lemmes)
+	}
+}
 
-// Visit implements in-order graph traversal procedure.
-func Visit(root Node, f VisitorFunc) error {
+// String returns textua representation of an object.
+func (ast *AST) String() string {
+	var norules = ast.NoRules()
+	return "<AST norules=" + strconv.Itoa(norules) + ";>"
+}
+
+// Traverse implements in-order graph traversal procedure.
+func (ast *AST) Traverse(visitor VisitorFunc) error {
+	if ast.semantic {
+		return ast.traverseSemanticTree(visitor)
+	} else {
+		return ast.traverseSyntacticTree(visitor)
+	}
+}
+
+func (ast *AST) traverseSemanticTree(visitor VisitorFunc) error {
+	// TODO(@daskol): Remove this tests in the future!
+	if len(ast.rules) == 0 {
+		return errors.New("bnf: there is no productions")
+	} else if ast.rules[0] == nil {
+		return errors.New("bnf: rule is empty")
+	} else {
+		return ast.visit(ast.rules[0], visitor)
+	}
+}
+
+func (ast *AST) traverseSyntacticTree(visitor VisitorFunc) error {
+	for _, node := range ast.lemmes[0] {
+		if err := visitor(node); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (ast *AST) visit(root Node, f VisitorFunc) error {
 	var stack = []Node{root}
 
 	for len(stack) != 0 {
@@ -68,154 +111,6 @@ func Visit(root Node, f VisitorFunc) error {
 		}
 	}
 
-	return nil
-}
-
-type Token = Term
-
-// Term represents terminal or non-terminal.
-type Term struct {
-	Name     []byte
-	Terminal bool
-	// Begin encodes position where token begins. The possition is relative to
-	// begin position of parent token.
-	Begin int
-	// End encodes position where token ends. The position is relateive as well
-	// as in case of begin.
-	End int
-}
-
-func (t *Term) Left() Node {
-	return nil
-}
-
-func (t *Term) Right() Node {
-	return nil
-}
-
-func (t *Term) String() string {
-	var name = string(t.Name)
-	var pos = "begin=" + strconv.Itoa(t.Begin) + "; end=" + strconv.Itoa(t.End)
-	var terminal = "false"
-	if t.Terminal {
-		terminal = "true"
-	}
-	return "<Term name=" + name + "; terminal=" + terminal + "; " + pos + ">"
-}
-
-// Comment is a lexeme that encode comment in a source code.
-type Comment struct {
-	Token
-}
-
-// List is a list of terminals and non-terminals.
-type List []*Term
-
-func (l List) Left() Node {
-	return nil
-}
-
-func (l List) Right() Node {
-	return nil
-}
-
-func (l *List) String() string {
-	var parts []string
-	for _, term := range *l {
-		parts = append(parts, term.String())
-	}
-	return strings.Join(parts, " ")
-}
-
-type Stmt struct {
-	Token // Points to lexeme that contains '|`.
-	Head  List
-	Tail  Node
-}
-
-func (s *Stmt) Left() Node {
-	return s.Head
-}
-
-func (s *Stmt) Right() Node {
-	return s.Tail
-}
-
-// ProductionRule is a production rule itself. Actually, it contains several
-// rules for a non-terminal.
-type ProductionRule struct {
-	Token // Points to lexeme that contains `::=`.
-	Name  *Term
-	Stmt  Node
-}
-
-func (r *ProductionRule) Left() Node {
-	return r.Name
-}
-
-func (r *ProductionRule) Right() Node {
-	return r.Stmt
-}
-
-func (r *ProductionRule) String() string {
-	var parts []string
-	for _, expr := range r.Expressions {
-		parts = append(parts, expr.String())
-	}
-	return r.Name.String() + " -> " + strings.Join(parts, " | ")
-}
-
-// AST type corresponds parsed BNF grammar. We use the same AST type for both
-// semantic parse tree and syntactic parse tree (which is actually a list of
-// lists).
-type AST struct {
-	// List of lists of terms. Each list corresponds to each line of the
-	// source.
-	lemmes [][]Node
-	// List of production rules. Each production rule is a line in the source.
-	rules []*ProductionRule
-	// True if the AST was produced be semantic parser.
-	semantic bool
-}
-
-func (ast *AST) NoRules() int {
-	if ast.semantic {
-		return len(ast.rules)
-	} else {
-		return len(ast.lemmes)
-	}
-}
-
-func (ast *AST) String() string {
-	var norules = ast.NoRules()
-	return "<AST norules=" + strconv.Itoa(norules) + ";>"
-}
-
-func (ast *AST) Traverse(visitor VisitorFunc) error {
-	if ast.semantic {
-		return ast.traverseSemanticTree(visitor)
-	} else {
-		return ast.traverseSyntacticTree(visitor)
-	}
-}
-
-func (ast *AST) traverseSemanticTree(visitor VisitorFunc) error {
-	// TODO(@daskol): Remove this tests in the future!
-	if len(ast.rules) == 0 {
-		return errors.New("bnf: there is no productions")
-	} else if ast.rules[0] == nil {
-		return errors.New("bnf: rule is empty")
-	} else {
-		return Visit(ast.rules[0], visitor)
-	}
-}
-
-func (ast *AST) traverseSyntacticTree(visitor VisitorFunc) error {
-	for _, node := range ast.lemmes[0] {
-		if err := visitor(node); err != nil {
-			return err
-		}
-	}
 	return nil
 }
 

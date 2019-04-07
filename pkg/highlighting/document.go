@@ -98,7 +98,7 @@ func (d *Document) parse(line []byte) (*parser.AST, error) {
 	defer func() {
 		// TODO(@daskol): Test parser heavily!
 		if ctx := recover(); ctx != nil {
-			logger.Errorf("recovery: %s\n%s", ctx, debug.Stack)
+			logger.Errorf("recovery: %s\n%s", ctx, debug.Stack())
 			err = errors.New("recovery during parsing")
 		}
 	}()
@@ -123,44 +123,30 @@ func (d *Document) hightlightLine(
 		var begin, end, res int
 
 		switch node := node.(type) {
-		case *parser.ProductionRule:
+		case *parser.AssignmentExpression:
 			grp = "Operator"
 			begin = node.Begin
 			end = node.End
-			batch.AddBufferHighlight(buf, 0, grp, row, begin, end, &res)
-		case *parser.Token:
-			if node.Terminal {
-				grp = "String"
-			} else {
-				grp = "Identifier"
-			}
+		case *parser.Terminal:
+			grp = "String"
 			begin = node.Begin
 			end = node.End
-			batch.AddBufferHighlight(buf, 0, grp, row, begin, end, &res)
-		case *parser.Stmt:
+		case *parser.NonTerminal:
+			grp = "Identifier"
+			begin = node.Begin
+			end = node.End
+		case *parser.AlternativeExpression:
 			grp = "Operator"
 			begin = node.Begin
 			end = node.End
-			batch.AddBufferHighlight(buf, 0, grp, row, begin, end, &res)
-		case parser.List:
-			for _, token := range node {
-				if token.Terminal {
-					grp = "String"
-				} else {
-					grp = "Identifier"
-				}
-				begin = token.Begin
-				end = token.End
-				batch.AddBufferHighlight(buf, 0, grp, row, begin, end, &res)
-			}
 		case *parser.Comment:
 			grp = "Comment"
-			begin = node.Begin
-			end = node.End
-			batch.AddBufferHighlight(buf, 0, grp, row, begin, end, &res)
 		default:
 			logger.Warnf("visiting unexpected token: %T", node)
+			return nil
 		}
+
+		batch.AddBufferHighlight(buf, 0, grp, row, begin, end, &res)
 
 		return nil
 	})
@@ -168,19 +154,9 @@ func (d *Document) hightlightLine(
 
 func (d *Document) updateCompletionIndex(ast *parser.AST) error {
 	return ast.Traverse(func(node parser.Node) error {
-		switch node := node.(type) {
-		case *parser.Token:
-			if !node.Terminal {
-				var counter = NonTerminalIndex[string(node.Name)]
-				NonTerminalIndex[string(node.Name)] = counter + 1
-			}
-		case parser.List:
-			for _, token := range node {
-				if !token.Terminal {
-					var counter = NonTerminalIndex[string(token.Name)]
-					NonTerminalIndex[string(token.Name)] = counter + 1
-				}
-			}
+		if node, ok := node.(*parser.NonTerminal); ok {
+			var counter = NonTerminalIndex[string(node.Name)]
+			NonTerminalIndex[string(node.Name)] = counter + 1
 		}
 
 		return nil

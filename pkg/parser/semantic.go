@@ -38,38 +38,39 @@ func (p *SemanticParser) eof() error {
 	}
 }
 
-func (p *SemanticParser) parseSyntax() ([]*ProductionRule, error) {
+func (p *SemanticParser) parseSyntax() ([]*Statement, error) {
 	var err error
-	var ret []*ProductionRule
-	var rule *ProductionRule
+	var result []*Statement
+	var stmt *Statement
 
-	if rule, err = p.parseRule(); err == io.EOF {
-		ret = append(ret, rule)
-		return ret, nil
+	if stmt, err = p.parseRule(); err == io.EOF {
+		result = append(result, stmt)
+		return result, nil
 	} else if err != nil {
 		return nil, err
 	}
 
-	if rules, err := p.parseSyntax(); err != nil {
-		ret = append(ret, rule)
+	if stmts, err := p.parseSyntax(); err != nil {
+		result = append(result, stmt)
 	} else {
-		ret = append(ret, rule)
-		ret = append(ret, rules...)
+		result = append(result, stmt)
+		result = append(result, stmts...)
 	}
 
-	return ret, nil
+	return result, nil
 }
 
-func (p *SemanticParser) parseRule() (*ProductionRule, error) {
+func (p *SemanticParser) parseRule() (*Statement, error) {
 	var err error
 	var token *Token
-	var rule = new(ProductionRule)
+	var expr = new(AssignmentExpression)
+	var stmt = Statement{Rule: expr}
 
 	if err = p.parseOptWhitespace(); err != nil {
 		return nil, err
 	}
 
-	if rule.Name, err = p.parseNonTerminal(); err != nil {
+	if expr.LeftChild, err = p.parseNonTerminal(); err != nil {
 		return nil, err
 	}
 
@@ -80,81 +81,78 @@ func (p *SemanticParser) parseRule() (*ProductionRule, error) {
 	if token, err = p.parseDefinitionSimbol(); err != nil {
 		return nil, err
 	} else {
-		rule.Token = *token
+		expr.Token = *token
 	}
 
 	if err = p.parseOptWhitespace(); err != nil {
 		return nil, err
 	}
 
-	if rule.Stmt, err = p.parseExpression(); err != nil {
+	if expr.RightChild, err = p.parseExpression(); err != nil {
 		return nil, err
 	}
 
 	if err = p.parseLineEnd(); err == io.EOF {
-		return rule, nil
+		return &stmt, nil
 	} else if err != nil {
 		return nil, err
 	}
 
-	return rule, nil
+	return &stmt, nil
 }
 
 func (p *SemanticParser) parseExpression() (Node, error) {
 	var err error
 	var offset int
-	var ret []List
-	var stmt Stmt
-	var head List
-	var tail Node
+	var root = new(AlternativeExpression)
 	var token *Token
 
 	// Parse single term list at first and back up position.
-	if head, err = p.parseList(); err != nil {
+	if root.LeftChild, err = p.parseList(); err != nil {
 		return nil, err
 	} else {
 		offset = p.pos
-		ret = append(ret, head)
 	}
 
 	// Now try to parse multiple production rules.
 	if err := p.parseOptWhitespace(); err != nil {
 		p.pos = offset
-		return head, nil
+		return root.LeftChild, nil
 	}
 
 	if token, err = p.parseDisjunction(); err != nil {
 		p.pos = offset
-		return head, nil
+		return root.LeftChild, nil
 	} else {
-		stmt.Token = *token
+		root.Token = *token
 	}
 
 	if err := p.parseOptWhitespace(); err != nil {
 		p.pos = offset
-		return head, nil
+		return root.LeftChild, nil
 	}
 
-	if tail, err = p.parseExpression(); err != nil {
+	if root.RightChild, err = p.parseExpression(); err != nil {
 		p.pos = offset
-		return head, nil
+		return root.LeftChild, nil
 	}
 
-	stmt.Head = head
-	stmt.Tail = tail
-	return &stmt, nil
+	return root, nil
 }
 
-func (p *SemanticParser) parseList() (List, error) {
+func (p *SemanticParser) parseList() (Node, error) {
+	var err error
 	var offset = p.pos
-	var terms []*Term
+	var root = new(CompoundExpression)
+	var last = root
+	var node Node
 
-	if term, err := p.parseTerm(); err != nil {
+	// Use CompoundExpression to create the first element of lexemme list.
+	if root.LeftChild, err = p.parseAtom(); err != nil {
 		return nil, err
-	} else {
-		terms = append(terms, term)
 	}
 
+	// Append CompoundExpression on each iteration.
 	for {
 		offset = p.pos
 
@@ -162,13 +160,36 @@ func (p *SemanticParser) parseList() (List, error) {
 			break
 		}
 
-		if term, err := p.parseTerm(); err != nil {
+		if node, err = p.parseAtom(); err != nil {
 			break
-		} else {
-			terms = append(terms, term)
 		}
+
+		var expr = &CompoundExpression{Expression{
+			Token:      Token{Begin: offset, End: p.pos},
+			LeftChild:  node,
+			RightChild: nil,
+		}}
+
+		last.RightChild = expr
+		last = expr
 	}
 
 	p.pos = offset
-	return terms, nil
+
+	// If there is only one lexeme then replace CompoundExpression with
+	// Terminal or NonTerminal node.
+	if last == root {
+		return root.LeftChild, nil
+	}
+
+	// Otherwise, replace the last CompoundExpression with either Terminal or
+	// NonTerminal node.
+	var curr *CompoundExpression = root
+	for curr.RightChild != last {
+		curr = curr.RightChild.(*CompoundExpression)
+	}
+
+	// Uplift the last child to the previous one CompoundExpression.
+	curr.RightChild = last.LeftChild
+	return root, nil
 }
