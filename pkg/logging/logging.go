@@ -67,7 +67,7 @@ func (l *Logger) Close() error {
 func (l *Logger) Debugf(format string, args ...interface{}) (int, error) {
 	l.guard.RLock()
 	defer l.guard.RUnlock()
-	if l.level < Debug {
+	if l.level > Debug {
 		return 0, nil
 	}
 	var msg = fmt.Sprintf(format, args...)
@@ -77,7 +77,7 @@ func (l *Logger) Debugf(format string, args ...interface{}) (int, error) {
 func (l *Logger) Errorf(format string, args ...interface{}) (int, error) {
 	l.guard.RLock()
 	defer l.guard.RUnlock()
-	if l.level < Error {
+	if l.level > Error {
 		return 0, nil
 	}
 	var msg = fmt.Sprintf(format, args...)
@@ -87,7 +87,7 @@ func (l *Logger) Errorf(format string, args ...interface{}) (int, error) {
 func (l *Logger) Infof(format string, args ...interface{}) (int, error) {
 	l.guard.RLock()
 	defer l.guard.RUnlock()
-	if l.level < Info {
+	if l.level > Info {
 		return 0, nil
 	}
 	var msg = fmt.Sprintf(format, args...)
@@ -97,7 +97,7 @@ func (l *Logger) Infof(format string, args ...interface{}) (int, error) {
 func (l *Logger) Noticef(format string, args ...interface{}) (int, error) {
 	l.guard.RLock()
 	defer l.guard.RUnlock()
-	if l.level < Notice {
+	if l.level > Notice {
 		return 0, nil
 	}
 	var msg = fmt.Sprintf(format, args...)
@@ -125,7 +125,7 @@ func (l *Logger) SetLevel(level string) *Logger {
 func (l *Logger) Warnf(format string, args ...interface{}) (int, error) {
 	l.guard.RLock()
 	defer l.guard.RUnlock()
-	if l.level < Warning {
+	if l.level > Warning {
 		return 0, nil
 	}
 	var msg = fmt.Sprintf(format, args...)

@@ -142,7 +142,6 @@ func (d *Document) hightlightLine(
 		case *parser.Comment:
 			grp = "Comment"
 		default:
-			logger.Warnf("visiting unexpected token: %T", node)
 			return nil
 		}
 
