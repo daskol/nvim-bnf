@@ -39,17 +39,21 @@ func (p *SemanticParser) eof() error {
 }
 
 func (p *SemanticParser) parseSyntax() ([]*Statement, error) {
-	var err error
 	var result []*Statement
-	var stmt *Statement
+	var stmt, err = p.parseRule()
 
-	if stmt, err = p.parseRule(); err == io.EOF {
+	// Try to parse the first statement if there is any.
+	switch {
+	case err == io.EOF && stmt == nil:
+		return nil, nil
+	case err == io.EOF && stmt != nil:
 		result = append(result, stmt)
 		return result, nil
-	} else if err != nil {
+	case err != nil:
 		return nil, err
 	}
 
+	// Recursively parse the rest.
 	if stmts, err := p.parseSyntax(); err != nil {
 		result = append(result, stmt)
 	} else {
