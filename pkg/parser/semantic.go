@@ -23,9 +23,14 @@ func (p *SemanticParser) Parse() (*AST, error) {
 		p.pos = 0
 	}
 
-	if rules, err := p.parseSyntax(); err != nil {
+	var rules, err = p.parseSyntax()
+
+	switch err := err.(type) {
+	case *DescError:
+		return nil, err
+	case error:
 		return nil, &Error{err, p.pos + 1}
-	} else {
+	default:
 		return &AST{rules: rules, semantic: true}, nil
 	}
 }
@@ -99,7 +104,8 @@ func (p *SemanticParser) parseRule() (*Statement, error) {
 	if err = p.parseLineEnd(); err == io.EOF {
 		return &stmt, nil
 	} else if err != nil {
-		return nil, err
+		var desc = "terminal or non-terminal or EOL"
+		return nil, NewDescError(err, p.pos, desc)
 	}
 
 	return &stmt, nil
@@ -114,6 +120,7 @@ func (p *SemanticParser) parseExpression() (Node, error) {
 	// Parse single term list at first and back up position.
 	if root.LeftChild, err = p.parseList(); err != nil {
 		return nil, err
+		return nil, NewDescError(err, p.pos, "terminal or non-terminal")
 	} else {
 		offset = p.pos
 	}
@@ -153,7 +160,7 @@ func (p *SemanticParser) parseList() (Node, error) {
 
 	// Use CompoundExpression to create the first element of lexemme list.
 	if root.LeftChild, err = p.parseAtom(); err != nil {
-		return nil, err
+		return nil, NewDescError(err, p.pos, "terminal or non-terminal")
 	}
 
 	// Append CompoundExpression on each iteration.

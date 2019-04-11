@@ -3,28 +3,16 @@ package parser
 
 import (
 	"bytes"
-	"errors"
 	"io"
 	"strconv"
 )
-
-var ErrNotImplemented = errors.New("bnf: not implemented")
-var ErrUnexpectedChar = errors.New("bnf: unexpected character")
-
-// Error represent parsing error and contains some context information.
-type Error struct {
-	err error
-	pos int
-}
-
-func (e *Error) Error() string {
-	return e.err.Error() + " at position " + strconv.Itoa(e.pos)
-}
 
 // AST type corresponds parsed BNF grammar. We use the same AST type for both
 // semantic parse tree and syntactic parse tree (which is actually a list of
 // lists).
 type AST struct {
+	// Save the parsing error.
+	err error
 	// List of lists of terms. Each list corresponds to each line of the
 	// source.
 	lemmes [][]Node
@@ -32,6 +20,11 @@ type AST struct {
 	rules []*Statement
 	// True if the AST was produced be semantic parser.
 	semantic bool
+}
+
+// Error provides access to saved semantic parsing errors.
+func (ast *AST) Error() error {
+	return ast.err
 }
 
 // NoRules gets the number of parsed rules.
@@ -61,9 +54,9 @@ func (ast *AST) Traverse(visitor VisitorFunc) error {
 func (ast *AST) traverseSemanticTree(visitor VisitorFunc) error {
 	// TODO(@daskol): Remove this tests in the future!
 	if len(ast.rules) == 0 {
-		return errors.New("bnf: there is no productions")
+		return ErrNoStatements
 	} else if ast.rules[0] == nil {
-		return errors.New("bnf: rule is empty")
+		return ErrEmptyRule
 	} else {
 		return ast.visit(ast.rules[0], visitor)
 	}
@@ -118,10 +111,20 @@ func (ast *AST) visit(root Node, f VisitorFunc) error {
 func Parse(source []byte) (*AST, error) {
 	var origin bytes.Buffer
 	var replica = io.TeeReader(bytes.NewBuffer(source), &origin)
+	var astSem, errSem = NewSemanticParser(replica).Parse()
 
-	if ast, err := NewSemanticParser(replica).Parse(); err == nil {
-		return ast, nil
+	if errSem == nil {
+		return astSem, nil
 	}
 
-	return NewSyntacticParser(&origin).Parse()
+	// Fallback to syntactic parser on error.
+	var astSyn, errSyn = NewSyntacticParser(&origin).Parse()
+
+	if errSyn != nil {
+		return nil, errSyn
+	} else {
+		astSyn.err = errSem
+	}
+
+	return astSyn, nil
 }

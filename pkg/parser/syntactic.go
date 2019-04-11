@@ -53,6 +53,10 @@ func (p *SyntacticParser) parseSyntax() ([][]Node, error) {
 }
 
 func (p *SyntacticParser) parseComment() (*Comment, error) {
+	if err := p.eof(); err != nil {
+		return nil, err
+	}
+
 	var token = Token{Begin: p.pos}
 
 	if p.buf[p.pos] != ';' {
@@ -242,7 +246,7 @@ func (p *SyntacticParser) parseLiteral() ([]byte, error) {
 		}
 
 		if _, err := p.parseDoubleQuote(); err != nil {
-			return nil, err
+			return nil, NewDescError(err, p.pos, "terminal")
 		}
 	case '\'': // Literals like 'literal"sample'.
 		if _, err := p.parseQuote(); err != nil {
@@ -258,10 +262,10 @@ func (p *SyntacticParser) parseLiteral() ([]byte, error) {
 		}
 
 		if _, err := p.parseQuote(); err != nil {
-			return nil, err
+			return nil, NewDescError(err, p.pos, "terminal")
 		}
 	default:
-		return nil, ErrUnexpectedChar
+		return nil, NewDescError(ErrUnexpectedChar, p.pos, "terminal")
 	}
 
 	return literal, nil
@@ -273,15 +277,15 @@ func (p *SyntacticParser) parseNonTerminal() (Node, error) {
 	var begin = p.pos
 
 	if _, err := p.parseLAngle(); err != nil {
-		return nil, err
+		return nil, NewDescError(err, begin, "non-terminal")
 	}
 
 	if token.Name, err = p.parseRuleName(); err != nil {
-		return nil, err
+		return nil, NewDescError(err, begin, "non-terminal")
 	}
 
 	if _, err := p.parseRAngle(); err != nil {
-		return nil, err
+		return nil, NewDescError(err, begin, "non-terminal")
 	}
 
 	token.Begin = begin
