@@ -123,19 +123,8 @@ func (d *Document) hightlightLine(
 ) error {
 	batch.ClearBufferHighlight(buf, -1, row, row+1)
 
-	// Update virtual text with error annotation.
-	if err := ast.Error(); err != nil {
-		var res = 0
-		var text = "syn: " + err.Error()
-		if err, ok := err.(*parser.DescError); ok {
-			text = err.String()
-		}
-		var chunks = []Chunk{NewChunk(text, "Error")}
-		SetVirtualText(batch, &buf, 0, row, chunks, NoOpts, &res)
-	}
-
 	// Traverse abstract tree and hightlight lexemes.
-	return ast.Traverse(func(node parser.Node) error {
+	var nonodes, err = ast.Traverse(func(node parser.Node) error {
 		var grp string
 		var begin, end, res int
 
@@ -166,10 +155,33 @@ func (d *Document) hightlightLine(
 
 		return nil
 	})
+
+	// If error was occured during traversing then exit.
+	if err != nil {
+		return err
+	}
+
+	// If there is no lexemes in tree then exit as well.
+	if nonodes == 0 {
+		return nil
+	}
+
+	// Update virtual text with error annotation.
+	if err := ast.Error(); err != nil {
+		var res = 0
+		var text = "syn: " + err.Error()
+		if err, ok := err.(*parser.DescError); ok {
+			text = err.String()
+		}
+		var chunks = []Chunk{NewChunk(text, "Error")}
+		SetVirtualText(batch, &buf, 0, row, chunks, NoOpts, &res)
+	}
+
+	return nil
 }
 
 func (d *Document) updateCompletionIndex(ast *parser.AST) error {
-	return ast.Traverse(func(node parser.Node) error {
+	var _, err = ast.Traverse(func(node parser.Node) error {
 		if node, ok := node.(*parser.NonTerminal); ok {
 			var counter = NonTerminalIndex[string(node.Name)]
 			NonTerminalIndex[string(node.Name)] = counter + 1
@@ -177,4 +189,5 @@ func (d *Document) updateCompletionIndex(ast *parser.AST) error {
 
 		return nil
 	})
+	return err
 }

@@ -42,8 +42,10 @@ func (ast *AST) String() string {
 	return "<AST norules=" + strconv.Itoa(norules) + ";>"
 }
 
-// Traverse implements in-order graph traversal procedure.
-func (ast *AST) Traverse(visitor VisitorFunc) error {
+// Traverse implements in-order graph traversal procedure. If traversing was
+// successfull it returns no error. In any case the function returns number of
+// nodes were visited.
+func (ast *AST) Traverse(visitor VisitorFunc) (int, error) {
 	if ast.semantic {
 		return ast.traverseSemanticTree(visitor)
 	} else {
@@ -51,31 +53,33 @@ func (ast *AST) Traverse(visitor VisitorFunc) error {
 	}
 }
 
-func (ast *AST) traverseSemanticTree(visitor VisitorFunc) error {
+func (ast *AST) traverseSemanticTree(visitor VisitorFunc) (int, error) {
 	// TODO(@daskol): Remove this tests in the future!
 	if len(ast.rules) == 0 {
-		return ErrNoStatements
+		return 0, ErrNoStatements
 	} else if ast.rules[0] == nil {
-		return ErrEmptyRule
+		return 0, ErrEmptyRule
 	} else {
 		return ast.visit(ast.rules[0], visitor)
 	}
 }
 
-func (ast *AST) traverseSyntacticTree(visitor VisitorFunc) error {
+func (ast *AST) traverseSyntacticTree(visitor VisitorFunc) (int, error) {
 	if len(ast.lemmes) == 0 {
-		return ErrNoStatements
+		return 0, ErrNoStatements
 	}
 
-	for _, node := range ast.lemmes[0] {
+	for idx, node := range ast.lemmes[0] {
 		if err := visitor(node); err != nil {
-			return err
+			return idx, err
 		}
 	}
-	return nil
+
+	return len(ast.lemmes[0]), nil
 }
 
-func (ast *AST) visit(root Node, f VisitorFunc) error {
+func (ast *AST) visit(root Node, f VisitorFunc) (int, error) {
+	var counter = 0
 	var stack = []Node{root}
 
 	for len(stack) != 0 {
@@ -99,16 +103,17 @@ func (ast *AST) visit(root Node, f VisitorFunc) error {
 		}
 
 		// Pop parent node (of nil node) and push right node.
+		counter++
 		node = stack[last]
 		stack[last] = node.Right()
 
 		// Call visitor callback on the parent node.
 		if err := f(node); err != nil {
-			return err
+			return counter, err
 		}
 	}
 
-	return nil
+	return counter, nil
 }
 
 // Parse parses BNF grammar.
