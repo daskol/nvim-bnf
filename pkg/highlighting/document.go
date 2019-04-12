@@ -78,15 +78,18 @@ func (d *Document) HightlightHunk(v *nvim.Nvim, buf nvim.Buffer, from, to int) {
 		}
 
 		// Update completion index.
-		if err = d.updateCompletionIndex(ast); err != nil {
+		switch err := d.updateCompletionIndex(ast); err {
+		case nil, parser.ErrNoStatements:
+		default:
 			logger.Warnf("failed to update completion index: %s", err)
 		}
 
-		// Hightlight line.
-		if err = d.hightlightLine(batch, buf, line, ast); err != nil {
+		// Hightlight line and set up annotated text.
+		switch err := d.hightlightLine(batch, buf, line, ast); err {
+		case nil, parser.ErrNoStatements:
+		default:
 			logger.Warnf(
-				"failed to hightlight line %d of %s: %s",
-				line, buf, err,
+				"failed to hightlight line %d of %s: %s", line, buf, err,
 			)
 		}
 	}
