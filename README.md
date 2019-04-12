@@ -4,6 +4,14 @@
 
 ## Overview
 
+**nvim-bnf** is a remote [NeoVim](https://github.com/neovim/neovim) plugin
+which provides both syntactical and semantical highlighting and autocompletion
+based on [NCM2](https://github.com/ncm2/ncm2) for grammars written in
+[Backus-Naur form (BNF)][3]. The plugin is written in Golang and governs
+MsgPack RPC protocol according to NeoVim specification. So there is only a
+little hunk of code written in VimL which performs registration and
+bootstrapping the plugin.
+
 ![Vim cast demo](doc/demo.gif "nvim-bnf in action")
 
 ## Installation
@@ -34,3 +42,4 @@ it manually since the plugin provides ability to generate manifest as follows.
 
 [1]: https://neovim.io/doc/user/remote_plugin.html#remote-plugin-manifest
 [2]: https://golang.org/doc/code.html
+[3]: https://en.wikipedia.org/wiki/Backus%E2%80%93Naur_form
