@@ -39,10 +39,15 @@ func (d *Document) NoLines() int {
 func (d *Document) Update(lines [][]byte, from, to int) (int, int) {
 	var nolines = len(lines)
 	var firstLines = d.Lines[:from]
-	var lastLines = d.Lines[to:]
+	var lastLines [][]byte
+
+	if to < len(d.Lines) {
+		lastLines = d.Lines[to:]
+	}
 
 	lines = append(firstLines, lines...)
 	lines = append(lines, lastLines...)
+	d.Lines = lines
 	return from, from + nolines
 }
 
