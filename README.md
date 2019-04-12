@@ -2,6 +2,10 @@
 
 *NeoVim semantic syntax highlighting plugin for BNF grammar*
 
+## Overview
+
+![Vim cast demo](doc/demo.gif "nvim-bnf in action")
+
 ## Installation
 
 In order to install one could use his or her favourite plugin manager like
