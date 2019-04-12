@@ -15,7 +15,7 @@ snippet.
 
 ```vim
     call plug#begin('~/.config/nvim/plugged')
-        Plug 'daskol/nvim-bnf', { 'do': 'go install ./cmd/nvim-nbg' }
+        Plug 'daskol/nvim-bnf', { 'do': 'go install ./cmd/nvim-nbf' }
     call plug#end()
 ```
 
