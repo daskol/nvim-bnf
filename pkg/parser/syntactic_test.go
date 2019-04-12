@@ -6,6 +6,30 @@ import (
 )
 
 func TestSyntacticParser(t *testing.T) {
+	t.Run("EmptySource", func(t *testing.T) {
+		var content = []byte("")
+		var parser = NewSyntacticParser(bytes.NewBuffer(content))
+		var ast, err = parser.Parse()
+
+		if err != nil {
+			t.Fatalf("failed to parse grammar: %s", err)
+		}
+
+		if length := ast.NoRules(); length != 0 {
+			t.Errorf("too a few production rules: %d", length)
+		}
+
+		defer func() {
+			if ctx := recover(); ctx != nil {
+				t.Fatalf("failed to traverse syntax tree")
+			}
+		}()
+
+		ast.traverseSyntacticTree(func(node Node) error {
+			return nil
+		})
+	})
+
 	t.Run("US Postal Address", func(t *testing.T) {
 		var content = readBNFFile(t, "us-postal-address.bnf")
 		var parser = NewSyntacticParser(bytes.NewBuffer(content))

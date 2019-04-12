@@ -63,6 +63,10 @@ func (ast *AST) traverseSemanticTree(visitor VisitorFunc) error {
 }
 
 func (ast *AST) traverseSyntacticTree(visitor VisitorFunc) error {
+	if len(ast.lemmes) == 0 {
+		return ErrNoStatements
+	}
+
 	for _, node := range ast.lemmes[0] {
 		if err := visitor(node); err != nil {
 			return err
