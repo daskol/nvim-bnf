@@ -67,23 +67,22 @@ func (d *Document) HightlightHunk(v *nvim.Nvim, buf nvim.Buffer, from, to int) {
 	for line := from; line != to; line++ {
 		var ast, err = d.parse(d.Lines[line])
 
-		switch {
-		case err != nil:
-			var res = 0
-			var text = "parsing error: " + err.Error()
-			var chunks = []Chunk{NewChunk(text, "Error")}
-			SetVirtualText(batch, &buf, 0, line, chunks, NoOpts, &res)
-		case err == nil:
-			if err = d.updateCompletionIndex(ast); err != nil {
-				logger.Warnf("failed to update completion index: %s", err)
-			}
+		// Skip the line if it causes parsing errors.
+		if err != nil {
+			continue
+		}
 
-			if err = d.hightlightLine(batch, buf, line, ast); err != nil {
-				logger.Warnf(
-					"failed to hightlight line %d of %s: %s",
-					line, buf, err,
-				)
-			}
+		// Update completion index.
+		if err = d.updateCompletionIndex(ast); err != nil {
+			logger.Warnf("failed to update completion index: %s", err)
+		}
+
+		// Hightlight line.
+		if err = d.hightlightLine(batch, buf, line, ast); err != nil {
+			logger.Warnf(
+				"failed to hightlight line %d of %s: %s",
+				line, buf, err,
+			)
 		}
 	}
 
@@ -118,6 +117,19 @@ func (d *Document) hightlightLine(
 	ast *parser.AST,
 ) error {
 	batch.ClearBufferHighlight(buf, -1, row, row+1)
+
+	// Update virtual text with error annotation.
+	if err := ast.Error(); err != nil {
+		var res = 0
+		var text = "syn: " + err.Error()
+		if err, ok := err.(*parser.DescError); ok {
+			text = err.String()
+		}
+		var chunks = []Chunk{NewChunk(text, "Error")}
+		SetVirtualText(batch, &buf, 0, row, chunks, NoOpts, &res)
+	}
+
+	// Traverse abstract tree and hightlight lexemes.
 	return ast.Traverse(func(node parser.Node) error {
 		var grp string
 		var begin, end, res int
